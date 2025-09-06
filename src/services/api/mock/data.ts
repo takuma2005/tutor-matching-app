@@ -30,10 +30,16 @@ export const mockStudents: Student[] = [
     email: 'hanako.tanaka@example.com',
     age: 16,
     grade: '高校2年生',
-    subjects_interested: ['数学', '英語'],
+    subjects_interested: ['数学', '英語', '物理'],
+    interested_subjects: ['数学', '英語', '物理'], // alias for compatibility
     learning_goals: '大学受験対策',
     preferred_schedule: '平日夜間',
     coins: 500,
+    school: '都立青山高等学校',
+    phone: '090-1234-5678',
+    bio: 'こんにちは！田中花子です。数学と英語の勉強をがんばっています。特に数学の関数が苦手なので、分かりやすく教えてくれる先生を探しています。よろしくお願いします！',
+    avatar: 'https://via.placeholder.com/120/F472B6/FFFFFF?text=花子',
+    avatar_url: 'https://via.placeholder.com/120/F472B6/FFFFFF?text=花子', // for compatibility
     created_at: '2024-01-15T09:00:00Z',
     updated_at: '2024-01-20T15:30:00Z',
   },
@@ -42,7 +48,7 @@ export const mockStudents: Student[] = [
 // モック先輩（家庭教師）データ
 export const mockTutors: Tutor[] = [
   {
-    id: 'tutor-1',
+    id: '1',
     name: '佐藤太郎',
     email: 'taro.sato@example.com',
     hourly_rate: 1500, // 1,500コイン/時（約1,875円）
@@ -57,12 +63,13 @@ export const mockTutors: Tutor[] = [
     grade: '大学2年',
     location: '東京都文京区',
     online_available: true,
-    avatar_url: 'https://via.placeholder.com/120/3B82F6/FFFFFF?text=佐藤',
+    avatar_url:
+      'https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=120&h=120&fit=crop&crop=faces&auto=format',
     created_at: '2023-09-01T08:00:00Z',
     updated_at: '2024-01-18T12:00:00Z',
   },
   {
-    id: 'tutor-2',
+    id: '2',
     name: '山田英子',
     email: 'eiko.yamada@example.com',
     hourly_rate: 1800, // 1,800コイン/時（約2,250円）
@@ -77,12 +84,13 @@ export const mockTutors: Tutor[] = [
     grade: '大学3年',
     location: '東京都渋谷区',
     online_available: true,
-    avatar_url: 'https://via.placeholder.com/120/10B981/FFFFFF?text=山田',
+    avatar_url:
+      'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=120&h=120&fit=crop&crop=faces&auto=format',
     created_at: '2023-11-15T10:00:00Z',
     updated_at: '2024-01-19T16:45:00Z',
   },
   {
-    id: 'tutor-3',
+    id: '3',
     name: '鈴木健一',
     email: 'kenichi.suzuki@example.com',
     hourly_rate: 2000, // 2,000コイン/時（約2,500円）
@@ -97,12 +105,13 @@ export const mockTutors: Tutor[] = [
     grade: '大学4年',
     location: '東京都文京区',
     online_available: false,
-    avatar_url: 'https://via.placeholder.com/120/F59E0B/FFFFFF?text=鈴木',
+    avatar_url:
+      'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=120&h=120&fit=crop&crop=faces&auto=format',
     created_at: '2023-08-01T07:00:00Z',
     updated_at: '2024-01-17T11:30:00Z',
   },
   {
-    id: 'tutor-4',
+    id: '4',
     name: '田中みなみ',
     email: 'minami.tanaka@example.com',
     hourly_rate: 1400,
@@ -117,7 +126,8 @@ export const mockTutors: Tutor[] = [
     grade: '大学1年',
     location: '東京都新宿区',
     online_available: true,
-    avatar_url: 'https://via.placeholder.com/120/EF4444/FFFFFF?text=田中',
+    avatar_url:
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&h=120&fit=crop&crop=faces&auto=format',
     created_at: '2024-01-01T09:00:00Z',
     updated_at: '2024-01-20T10:30:00Z',
   },
@@ -137,7 +147,8 @@ export const mockTutors: Tutor[] = [
     grade: '修士1年',
     location: '京都市左京区',
     online_available: true,
-    avatar_url: 'https://via.placeholder.com/120/8B5CF6/FFFFFF?text=高橋',
+    avatar_url:
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=faces&auto=format',
     created_at: '2023-06-15T11:00:00Z',
     updated_at: '2024-01-22T14:20:00Z',
   },
@@ -157,7 +168,8 @@ export const mockTutors: Tutor[] = [
     grade: '大学2年',
     location: '東京都千代田区',
     online_available: true,
-    avatar_url: 'https://via.placeholder.com/120/EC4899/FFFFFF?text=佐藤',
+    avatar_url:
+      'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?w=120&h=120&fit=crop&crop=faces&auto=format',
     created_at: '2023-10-12T13:30:00Z',
     updated_at: '2024-01-21T09:15:00Z',
   },
@@ -191,6 +203,31 @@ export const mockLessons: Lesson[] = [
     coin_cost: 150,
     created_at: '2024-01-20T09:00:00Z',
     updated_at: '2024-01-20T09:00:00Z',
+  },
+  // 追加: 未来のモック授業（ホームの「授業の予定」に反映されます）
+  {
+    id: 'lesson-3',
+    tutor_id: '1',
+    student_id: 'student-1',
+    subject: '数学',
+    status: 'scheduled',
+    scheduled_at: '2025-09-08T10:00:00Z',
+    duration_minutes: 60,
+    coin_cost: 120,
+    created_at: '2025-09-06T09:00:00Z',
+    updated_at: '2025-09-06T09:00:00Z',
+  },
+  {
+    id: 'lesson-4',
+    tutor_id: '2',
+    student_id: 'student-1',
+    subject: '英語',
+    status: 'scheduled',
+    scheduled_at: '2025-09-12T18:30:00Z',
+    duration_minutes: 90,
+    coin_cost: 180,
+    created_at: '2025-09-06T09:00:00Z',
+    updated_at: '2025-09-06T09:00:00Z',
   },
 ];
 

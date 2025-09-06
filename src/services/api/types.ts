@@ -22,6 +22,7 @@ export interface Student extends User {
   school?: string;
   phone?: string;
   bio?: string;
+  avatar?: string;
 }
 
 export interface Tutor extends User {

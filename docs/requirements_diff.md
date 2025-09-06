@@ -4,6 +4,60 @@
 
 ## 変更履歴
 
+### 2025-09-06（UI/ナビゲーション/ログ抑制）
+
+#### 検索（探す）
+
+- プロフィール画像を円形に統一し、右下にオンライン緑丸を重ねて表示（bottom:2 / right:2 / size:12 / border 2px white）
+- 画像読み込み失敗時はプレースホルダーへフォールバック
+- モック画像URLを Unsplash の顔クロップに差し替え（表示安定化）
+
+#### ホーム
+
+- ヘッダー右にコイン残高ボタンを追加（タップでコイン管理へ）
+- 大きいコイン残高カードを削除（残高表示の集約）
+- 授業の予定：3行構成に変更（件名 / 日時+詳細ボタン / 先生名）＋ 余白の見直し（padding: sm / marginBottom: sm）
+- 授業の予定：境界表現はボーダーではなくシャドーに統一（offset: 0,2 / opacity: 0.08 / radius: 6 / elevation: 3）
+- アクションバー／授業の予定／おすすめの先輩の横幅を TutorCard と統一（marginHorizontal: spacing.md）
+- おすすめの先輩：Home も共通 TutorCard を使用（探すとUI統一）
+
+#### ナビゲーション
+
+- MyPageStack 内のルート名を `MyPage` → `MyPageMain` に変更（タブ名重複警告の解消）
+
+#### パフォーマンス/ログ
+
+- getApiClient のモックログを初回1回のみに抑制
+- SearchScreen のデータ取得を useFocusEffect に移行（不要なAPI呼び出し抑制）
+- UserContext.refreshCoins：同時実行/5秒以内の連続呼び出しを抑止
+
+#### 影響ファイル（主な）
+
+- src/components/tutor/TutorCard.tsx
+- src/screens/SearchScreen.tsx
+- src/screens/HomeScreen.tsx
+- src/navigation/MyPageStackNavigator.tsx
+- src/services/api/mock/data.ts
+- src/services/api/mock/index.ts
+- src/contexts/UserContext.tsx
+
+---
+
+## 変更履歴
+
+### 2025-01-06（お気に入り機能）
+
+- グローバルFavoritesContext導入、FavoriteScreen追加
+- TutorCard / Home / Search / TutorDetail にお気に入り統合（トグルで反映）
+- UI統一:
+  - 評価は5つ星表示、レビュー数を星の右に括弧付きで表示
+  - オンライン表示を緑丸インジケータに変更
+  - 料金表示はプライマリカラーで統一
+- データ整備:
+  - モックのID形式を `tutor-X` → `X` に統一
+- 環境:
+  - `npm start` + EXPO_PUBLIC_SKIP_AUTH=true による認証スキップ
+
 ### 2025-09-05 (Sprint 1実装時)
 
 #### 用語統一の確認

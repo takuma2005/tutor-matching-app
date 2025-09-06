@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "expo start",
+    "start": "cross-env EXPO_PUBLIC_SKIP_AUTH=true expo start",
     "start:skip": "cross-env EXPO_PUBLIC_SKIP_AUTH=true expo start",
     "start:skip:clean": "cross-env EXPO_PUBLIC_SKIP_AUTH=true expo start -c",
     "android": "expo start --android",

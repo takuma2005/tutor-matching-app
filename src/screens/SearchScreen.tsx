@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
@@ -6,11 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import TutorCard from '../components/tutor/TutorCard';
 import TutorCardSkeleton from '../components/tutor/TutorCardSkeleton';
+import { useFavorites } from '../contexts/FavoritesContext';
 import { SearchStackParamList } from '../navigation/SearchStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 import { getApiClient } from '@/services/api/mock';
-import type { Tutor } from '@/services/api/types';
+import type { Tutor, Student } from '@/services/api/types';
 
 type FilterOptions = {
   subject: string;
@@ -26,12 +28,14 @@ type Props = {
 };
 
 export default function SearchScreen({ navigation }: Props) {
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [allTutors, setAllTutors] = useState<Tutor[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [searchText, setSearchText] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState<'subject' | 'rate' | 'other'>('subject');
   const [isLoading, setIsLoading] = useState(true);
+  const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [filters, setFilters] = useState<FilterOptions>({
     subject: '',
     minRate: 0,
@@ -41,18 +45,30 @@ export default function SearchScreen({ navigation }: Props) {
 
   const subjects = ['数学', '英語', '物理', '化学', '生物', '国語', '現代文'];
 
-  useEffect(() => {
-    const api = getApiClient();
-    setIsLoading(true);
-    api.student
-      .searchTutors(undefined, 1, 100)
-      .then((resp) => {
-        const data = resp?.success ? resp.data : [];
-        setAllTutors(data);
-        setTutors(data);
-      })
-      .finally(() => setIsLoading(false));
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      const api = getApiClient();
+      setIsLoading(true);
+      Promise.all([
+        api.student.searchTutors(undefined, 1, 100),
+        api.student.getProfile('student-1'),
+      ])
+        .then(([tutorsResp, studentResp]) => {
+          if (!active) return;
+          const tutorsData = tutorsResp?.success ? tutorsResp.data : [];
+          setAllTutors(tutorsData);
+          setTutors(tutorsData);
+          if (studentResp?.success) {
+            setCurrentStudent(studentResp.data);
+          }
+        })
+        .finally(() => active && setIsLoading(false));
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   // フィルタリング処理
   useEffect(() => {
@@ -103,7 +119,14 @@ export default function SearchScreen({ navigation }: Props) {
       totalLessons={item.total_lessons}
       onlineAvailable={item.online_available ?? false}
       avatarUrl={item.avatar_url}
+      isFavorite={isFavorite(item.id)}
       onPress={() => handleTutorPress(item.id)}
+      onFavoritePress={() => {
+        if (currentStudent) {
+          toggleFavorite(item.id, currentStudent.id);
+        }
+      }}
+      onDetailPress={() => handleTutorPress(item.id)}
     />
   );
 

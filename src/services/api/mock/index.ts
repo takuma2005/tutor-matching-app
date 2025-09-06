@@ -32,15 +32,18 @@ export const API_CONFIG = {
 };
 
 // 環境設定用のヘルパー関数
+let __mockLogPrinted = false;
 export const getApiClient = () => {
   if (API_CONFIG.USE_MOCK) {
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__ && !__mockLogPrinted) {
       console.log('🧪 Using Mock API Client');
+      __mockLogPrinted = true;
     }
     return mockApiClient;
   } else {
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__ && !__mockLogPrinted) {
       console.log('🌐 Using Production API Client');
+      __mockLogPrinted = true;
     }
     // 本番APIクライアントをここで返す（後で実装）
     throw new Error('Production API client not implemented yet');

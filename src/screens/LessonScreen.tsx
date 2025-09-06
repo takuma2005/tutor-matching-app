@@ -64,8 +64,11 @@ export default function LessonScreen() {
     };
   }, []);
 
+  const now = Date.now();
   const upcomingLessons = lessons.filter(
-    (lesson) => lesson.status === 'pending' || lesson.status === 'confirmed',
+    (lesson) =>
+      (lesson.status === 'pending' || lesson.status === 'confirmed') &&
+      lesson.scheduledAt.getTime() >= now,
   );
 
   const completedLessons = lessons.filter((lesson) => lesson.status === 'completed');

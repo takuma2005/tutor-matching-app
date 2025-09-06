@@ -1,15 +1,19 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import TutorCard from '../components/tutor/TutorCard';
+import { useFavorites } from '../contexts/FavoritesContext';
+import { useUser } from '../contexts/UserContext';
 import { HomeStackParamList } from '../navigation/HomeStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 import { getApiClient } from '@/services/api/mock';
-import type { Tutor, Student } from '@/services/api/types';
+import type { Tutor, Lesson } from '@/services/api/types';
 
 type HomeScreenNavigationProp = StackNavigationProp<HomeStackParamList, 'HomeMain'>;
 
@@ -18,20 +22,41 @@ type Props = {
 };
 
 export default function HomeScreen({ navigation }: Props) {
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { user, refreshCoins } = useUser();
   const [recommendedTutors, setRecommendedTutors] = useState<Tutor[]>([]);
-  const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
+  const [upcoming, setUpcoming] = useState<{ lesson: Lesson; tutor?: Tutor } | null>(null);
 
   useEffect(() => {
     const api = getApiClient();
     let isMounted = true;
-    Promise.all([api.student.searchTutors(undefined, 1, 50), api.student.getProfile('student-1')])
-      .then(([tutorsResp, studentResp]) => {
+    Promise.all([
+      api.student.searchTutors(undefined, 1, 50),
+      api.student.getLessons({ status: 'scheduled' }, 1, 20),
+    ])
+      .then(([tutorsResp, lessonsResp]) => {
         if (!isMounted) return;
         const tutors = tutorsResp?.success ? tutorsResp.data : [];
         const recommended = [...tutors].sort((a, b) => b.rating - a.rating).slice(0, 3);
         setRecommendedTutors(recommended);
-        if (studentResp?.success && studentResp.data) {
-          setCurrentStudent(studentResp.data);
+
+        if (lessonsResp?.success) {
+          const upcomingList = [...lessonsResp.data]
+            .filter((l) => l.status === 'scheduled')
+            .sort(
+              (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
+            );
+          const now = Date.now();
+          const upcomingLesson =
+            upcomingList.find((l) => new Date(l.scheduled_at).getTime() >= now) ||
+            upcomingList[0] ||
+            null;
+          if (upcomingLesson) {
+            const tutor = tutors.find((t) => t.id === upcomingLesson.tutor_id);
+            setUpcoming({ lesson: upcomingLesson, tutor });
+          } else {
+            setUpcoming(null);
+          }
         }
       })
       .catch(() => {
@@ -42,6 +67,14 @@ export default function HomeScreen({ navigation }: Props) {
     };
   }, []);
 
+  // 画面フォーカス時にコイン残高をリフレッシュ
+  useFocusEffect(
+    useCallback(() => {
+      refreshCoins();
+      return undefined;
+    }, [refreshCoins]),
+  );
+
   const handleTutorPress = (tutorId: string) => {
     navigation.navigate('TutorDetail', { tutorId });
   };
@@ -51,9 +84,23 @@ export default function HomeScreen({ navigation }: Props) {
       {/* Fixed Header */}
       <View style={styles.fixedHeader} testID="home-header">
         <Text style={styles.appName}>センパイ</Text>
-        <TouchableOpacity style={styles.notificationButton} testID="notification-icon">
-          <MaterialIcons name="notifications" size={20} color={colors.gray700} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.headerCoinButton}
+            onPress={() => navigation.navigate('CoinManagement')}
+            testID="header-coin-button"
+          >
+            <MaterialIcons name="account-balance-wallet" size={18} color={colors.warning} />
+            <Text style={styles.headerCoinText}>{(user?.coins ?? 0).toLocaleString()}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            testID="notification-icon"
+            onPress={() => navigation.navigate('Notification')}
+          >
+            <MaterialIcons name="notifications" size={20} color={colors.gray700} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -64,34 +111,50 @@ export default function HomeScreen({ navigation }: Props) {
           style={styles.headerGradient}
         >
           <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeText}>
-              おはよう、{currentStudent?.name ?? 'ゲスト'}さん！👋
-            </Text>
+            <Text style={styles.welcomeText}>おはよう、{user?.name || 'ゲスト'}さん！👋</Text>
             <Text style={styles.subtitle}>今日も新しい学びの出会いを見つけよう</Text>
           </View>
         </LinearGradient>
 
         {/* Rounded transition with overlaid cards */}
         <View style={styles.contentContainer}>
-          {/* Coin Card - overlaid on gradient transition */}
-          <View style={styles.overlaidCardSection}>
-            <View style={styles.coinCard} testID="coin-card">
-              <View style={styles.coinIconContainer}>
-                <MaterialIcons name="account-balance-wallet" size={24} color={colors.warning} />
-              </View>
-              <View style={styles.coinInfo}>
-                <Text style={styles.coinLabel}>コイン残高</Text>
-                <Text style={styles.coinAmount}>
-                  {(currentStudent?.coins ?? 0).toLocaleString()}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.addCoinButton}
-                onPress={() => navigation.navigate('CoinManagement' as never)}
-              >
-                <Text style={styles.addCoinText}>購入する</Text>
-              </TouchableOpacity>
+          {/* 授業の予定 */}
+          <View style={[styles.section, styles.sectionGap]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>授業の予定</Text>
             </View>
+            {upcoming ? (
+              <View style={styles.lessonCard} testID="upcoming-lesson-card">
+                <View style={styles.lessonHeader}>
+                  <MaterialIcons name="event" size={18} color={colors.primary} />
+                  <Text style={styles.lessonTitle}>{upcoming.lesson.subject || 'レッスン'}</Text>
+                </View>
+                <View style={styles.lessonRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.lessonMeta}>
+                      {new Date(upcoming.lesson.scheduled_at).toLocaleString('ja-JP', {
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                    <Text style={styles.lessonTutor}>
+                      先生:{' '}
+                      {upcoming.tutor ? upcoming.tutor.name : `ID: ${upcoming.lesson.tutor_id}`}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.lessonDetailButton}
+                    onPress={() => (navigation as any).navigate('Lesson')}
+                  >
+                    <Text style={styles.lessonDetailButtonText}>詳細を見る</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.emptyLessonText}>次の授業はまだありません</Text>
+            )}
           </View>
 
           {/* Quick Action Card - overlaid */}
@@ -99,7 +162,7 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={styles.quickActions} testID="quick-actions">
               <TouchableOpacity
                 style={styles.quickActionItem}
-                onPress={() => navigation.navigate('Search' as never)}
+                onPress={() => console.log('Search function not implemented in Home stack')}
               >
                 <View style={styles.quickActionIcon}>
                   <MaterialIcons name="search" size={24} color={colors.primary} />
@@ -112,9 +175,12 @@ export default function HomeScreen({ navigation }: Props) {
                 </View>
                 <Text style={styles.quickActionText}>予約</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.quickActionItem}>
+              <TouchableOpacity
+                style={styles.quickActionItem}
+                onPress={() => navigation.navigate('Favorite')}
+              >
                 <View style={styles.quickActionIcon}>
-                  <MaterialIcons name="star" size={24} color={colors.primary} />
+                  <MaterialIcons name="favorite" size={24} color={colors.primary} />
                 </View>
                 <Text style={styles.quickActionText}>お気に入り</Text>
               </TouchableOpacity>
@@ -138,60 +204,28 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
 
             {recommendedTutors.map((tutor) => (
-              <TouchableOpacity
-                key={tutor.id}
-                style={styles.tutorCard}
-                testID="tutor-card"
-                onPress={() => handleTutorPress(tutor.id)}
-              >
-                <View style={styles.tutorCardContent}>
-                  <View
-                    style={[
-                      styles.tutorAvatar,
-                      { backgroundColor: tutor.id === '1' ? colors.error : colors.primary },
-                    ]}
-                  >
-                    <Text style={styles.tutorAvatarText}>{tutor.name.charAt(0)}</Text>
-                    {tutor.online_available && <View style={styles.onlineDot} />}
-                  </View>
-
-                  <View style={styles.tutorInfo}>
-                    <View style={styles.tutorHeader}>
-                      <Text style={styles.tutorName}>{tutor.name}</Text>
-                      <View style={styles.ratingContainer}>
-                        <MaterialIcons name="star" size={14} color={colors.warning} />
-                        <Text style={styles.ratingText}>
-                          {tutor.rating} ({tutor.total_lessons}回)
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text style={styles.tutorSchool}>
-                      {tutor.school} {tutor.grade}
-                    </Text>
-
-                    <View style={styles.tutorSubjects}>
-                      {tutor.subjects_taught.slice(0, 3).map((subject: string, index: number) => (
-                        <View key={index} style={styles.subjectChip}>
-                          <Text style={styles.subjectChipText}>{subject}</Text>
-                        </View>
-                      ))}
-                    </View>
-
-                    <View style={styles.tutorFooter}>
-                      <Text style={styles.tutorRate}>
-                        {tutor.hourly_rate.toLocaleString()}コイン/時
-                      </Text>
-                      {tutor.online_available && (
-                        <View style={styles.onlineStatusContainer}>
-                          <View style={styles.onlineIndicator} />
-                          <Text style={styles.onlineStatus}>オンライン</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
+              <View key={tutor.id} style={styles.tutorCardWrapper}>
+                <TutorCard
+                  id={tutor.id}
+                  name={tutor.name}
+                  school={tutor.school ?? ''}
+                  grade={tutor.grade ?? ''}
+                  subjects={tutor.subjects_taught}
+                  hourlyRate={tutor.hourly_rate}
+                  rating={tutor.rating}
+                  totalLessons={tutor.total_lessons}
+                  onlineAvailable={tutor.online_available ?? false}
+                  avatarUrl={tutor.avatar_url}
+                  isFavorite={isFavorite(tutor.id)}
+                  onPress={() => handleTutorPress(tutor.id)}
+                  onDetailPress={() => handleTutorPress(tutor.id)}
+                  onFavoritePress={() => {
+                    if (user) {
+                      toggleFavorite(tutor.id, user.id);
+                    }
+                  }}
+                />
+              </View>
             ))}
           </View>
 
@@ -230,6 +264,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  headerCoinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gray100,
+    paddingHorizontal: spacing.md,
+    height: 32,
+    borderRadius: borderRadius.full,
+    marginRight: spacing.sm,
+  },
+  headerCoinText: {
+    marginLeft: spacing.xs / 2,
+    color: colors.gray800,
+    fontWeight: '700',
+    fontSize: typography.sizes?.caption || 12,
+  },
   notificationButton: {
     padding: spacing.xs,
     borderRadius: borderRadius.full,
@@ -254,7 +308,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
   },
   contentContainer: {
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     marginTop: -spacing.xl,
@@ -310,9 +364,71 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '600',
   },
+  lessonCard: {
+    backgroundColor: colors.white,
+    marginHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  lessonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs / 2,
+    gap: spacing.xs,
+  },
+  lessonTitle: {
+    fontSize: typography.sizes?.caption || 12,
+    fontWeight: '700',
+    color: colors.gray900,
+    marginLeft: spacing.xs / 2,
+  },
+  lessonMeta: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray600,
+    marginBottom: spacing.xs / 4,
+  },
+  lessonTutor: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray700,
+    marginBottom: spacing.xs / 2,
+  },
+  lessonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  lessonDetailButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    height: 28,
+    minWidth: 96,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lessonDetailButtonText: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: typography.sizes?.caption || 12,
+  },
+  emptyLessonText: {
+    marginHorizontal: spacing.lg,
+    color: colors.gray600,
+    fontSize: typography.sizes?.caption || 12,
+  },
+  sectionGap: {
+    marginBottom: spacing.md,
+  },
+
   quickActionCard: {
     backgroundColor: colors.white,
-    marginHorizontal: spacing.lg,
+    marginHorizontal: spacing.md,
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
     marginBottom: spacing.xl,
@@ -353,7 +469,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
   sectionTitle: {
@@ -370,16 +486,21 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginRight: spacing.xs / 2,
   },
+  tutorCardWrapper: {
+    position: 'relative',
+    marginHorizontal: 0,
+    marginBottom: 0,
+  },
   tutorCard: {
     backgroundColor: colors.white,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
     borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.gray200,
     shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tutorCardContent: {
     flexDirection: 'row',
@@ -463,23 +584,25 @@ const styles = StyleSheet.create({
   tutorRate: {
     fontSize: typography.sizes?.body || 16,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.primary,
   },
-  onlineStatusContainer: {
-    flexDirection: 'row',
+  favoriteButtonHome: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.full || 999,
+    width: 32,
+    height: 32,
     alignItems: 'center',
-  },
-  onlineIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.success,
-    marginRight: spacing.xs / 2,
-  },
-  onlineStatus: {
-    fontSize: typography.sizes?.caption || 12,
-    color: colors.success,
-    fontWeight: '500',
+    justifyContent: 'center',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.gray100,
   },
   bottomSpacing: {
     height: spacing.xl,

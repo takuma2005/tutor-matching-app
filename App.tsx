@@ -6,6 +6,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import ErrorBoundary from './src/components/common/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { FavoritesProvider } from './src/contexts/FavoritesContext';
+import { UserProvider } from './src/contexts/UserContext';
 import TabNavigator from './src/navigation/TabNavigator';
 import PhoneVerificationScreen from './src/screens/auth/PhoneVerificationScreen';
 import ProfileSetupScreen, { ProfileData } from './src/screens/auth/ProfileSetupScreen';
@@ -84,9 +86,13 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <ErrorBoundary>
-            <AppContent />
-          </ErrorBoundary>
+          <UserProvider>
+            <FavoritesProvider>
+              <ErrorBoundary>
+                <AppContent />
+              </ErrorBoundary>
+            </FavoritesProvider>
+          </UserProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

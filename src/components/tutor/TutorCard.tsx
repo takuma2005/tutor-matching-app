@@ -3,9 +3,6 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
-import Badge from '../common/Badge';
-import Rating from '../common/Rating';
-import Tag from '../common/Tag';
 
 type TutorCardProps = {
   id: string;
@@ -18,7 +15,11 @@ type TutorCardProps = {
   totalLessons: number;
   onlineAvailable: boolean;
   avatarUrl?: string;
+  isFavorite?: boolean;
   onPress: () => void;
+  onFavoritePress?: () => void;
+  onDetailPress?: () => void;
+  avatarVariant?: 'circle' | 'portrait';
 };
 
 export default function TutorCard({
@@ -31,27 +32,42 @@ export default function TutorCard({
   totalLessons,
   onlineAvailable,
   avatarUrl,
+  isFavorite = false,
   onPress,
+  onFavoritePress,
+  onDetailPress,
+  avatarVariant = 'circle',
 }: TutorCardProps) {
+  const [imageOk, setImageOk] = React.useState(true);
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.content}>
         {/* 左側：アバター */}
-        <View style={styles.avatarContainer}>
-          {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+        <View
+          style={[
+            styles.avatarContainer,
+            avatarVariant === 'portrait' && styles.avatarContainerPortrait,
+          ]}
+        >
+          {avatarUrl && imageOk ? (
+            <Image
+              source={{ uri: avatarUrl }}
+              style={[styles.avatar, avatarVariant === 'portrait' && styles.avatarPortrait]}
+              resizeMode="cover"
+              onError={() => setImageOk(false)}
+            />
           ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <View
+              style={[
+                styles.avatar,
+                avatarVariant === 'portrait' && styles.avatarPortrait,
+                styles.avatarPlaceholder,
+              ]}
+            >
               <MaterialIcons name="person" size={32} color={colors.gray400} />
             </View>
           )}
-          {onlineAvailable && (
-            <View style={styles.onlineBadge}>
-              <Badge color="success" size="sm">
-                オンライン
-              </Badge>
-            </View>
-          )}
+          {onlineAvailable && <View style={styles.onlineIndicator} />}
         </View>
 
         {/* 右側：情報 */}
@@ -60,7 +76,19 @@ export default function TutorCard({
             <Text style={styles.name} numberOfLines={1}>
               {name}
             </Text>
-            <Rating value={rating} size={14} />
+            <View style={styles.ratingContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <MaterialIcons
+                  key={star}
+                  name={star <= rating ? 'star' : 'star-border'}
+                  size={14}
+                  color={colors.warning}
+                  style={styles.starIcon}
+                />
+              ))}
+              <Text style={styles.ratingValue}>{rating}</Text>
+              <Text style={styles.ratingText}>({totalLessons})</Text>
+            </View>
           </View>
 
           <View style={styles.schoolInfo}>
@@ -70,7 +98,9 @@ export default function TutorCard({
 
           <View style={styles.subjects}>
             {subjects.slice(0, 3).map((subject, index) => (
-              <Tag key={index}>{subject}</Tag>
+              <View key={index} style={styles.subjectChip}>
+                <Text style={styles.subjectChipText}>{subject}</Text>
+              </View>
             ))}
             {subjects.length > 3 && <Text style={styles.moreSubjects}>+{subjects.length - 3}</Text>}
           </View>
@@ -79,9 +109,37 @@ export default function TutorCard({
             <View style={styles.priceContainer}>
               <Text style={styles.price}>{hourlyRate.toLocaleString()}コイン/時</Text>
             </View>
-            <Text style={styles.lessonCount}>{totalLessons}回授業</Text>
           </View>
         </View>
+      </View>
+
+      {/* ボタンエリア */}
+      <View style={styles.buttonsContainer}>
+        {/* お気に入りボタン */}
+        {onFavoritePress && (
+          <TouchableOpacity
+            style={styles.favoriteButton}
+            onPress={onFavoritePress}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <MaterialIcons
+              name={isFavorite ? 'favorite' : 'favorite-border'}
+              size={20}
+              color={isFavorite ? colors.error : colors.gray500}
+            />
+          </TouchableOpacity>
+        )}
+
+        {/* 詳細ボタン */}
+        {onDetailPress && (
+          <TouchableOpacity
+            style={styles.detailButton}
+            onPress={onDetailPress}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.detailButtonText}>詳細</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -93,7 +151,13 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     marginHorizontal: spacing.md,
     marginVertical: spacing.xs,
-    ...shadows.md,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   content: {
     flexDirection: 'row',
@@ -102,21 +166,39 @@ const styles = StyleSheet.create({
   avatarContainer: {
     position: 'relative',
     marginRight: spacing.md,
+    width: 60,
+    height: 60,
   },
   avatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
   },
+  avatarPortrait: {
+    width: 72,
+    height: 96,
+    borderRadius: borderRadius.md,
+  },
+  avatarContainerPortrait: {
+    width: 72,
+  },
   avatarPlaceholder: {
     backgroundColor: colors.gray100,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  onlineBadge: {
+  onlineIndicator: {
     position: 'absolute',
-    bottom: -6,
-    right: -6,
+    bottom: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.success,
+    borderWidth: 2,
+    borderColor: colors.white,
+    zIndex: 2,
+    pointerEvents: 'none',
   },
   infoContainer: {
     flex: 1,
@@ -135,6 +217,19 @@ const styles = StyleSheet.create({
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  starIcon: {
+    marginRight: 1,
+  },
+  ratingValue: {
+    fontSize: typography.fontSizes.xs,
+    color: colors.gray600,
+    marginLeft: 4,
+    marginRight: 2,
+  },
+  ratingText: {
+    fontSize: typography.fontSizes.xs,
+    color: colors.gray600,
   },
   schoolInfo: {
     flexDirection: 'row',
@@ -155,6 +250,23 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     flexWrap: 'wrap',
   },
+  subjectTag: {
+    marginRight: spacing.xs,
+    marginBottom: spacing.xs / 2,
+  },
+  subjectChip: {
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full || 999,
+    marginRight: spacing.xs,
+    marginBottom: spacing.xs / 2,
+  },
+  subjectChipText: {
+    fontSize: 10,
+    color: colors.primary,
+    fontWeight: '500',
+  },
   moreSubjects: {
     fontSize: typography.fontSizes.xs,
     color: colors.gray500,
@@ -162,7 +274,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'flex-end',
   },
   priceContainer: {
@@ -173,8 +285,32 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.semibold,
     color: colors.primary,
   },
-  lessonCount: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.gray500,
+  buttonsContainer: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  favoriteButton: {
+    marginRight: spacing.sm,
+  },
+  detailButton: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  detailButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.white,
   },
 });

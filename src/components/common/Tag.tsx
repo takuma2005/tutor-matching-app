@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   outline: {
     borderWidth: 1,
     borderColor: colors.primary,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.primary + '10',
   },
   sm: {
     minHeight: 18,

@@ -6,6 +6,7 @@ import type { ImageStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BottomSheet from '../components/common/BottomSheet';
+import { useFavorites } from '../contexts/FavoritesContext';
 import type { HomeStackParamList } from '../navigation/HomeStackNavigator';
 import type { SearchStackParamList } from '../navigation/SearchStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
@@ -24,6 +25,7 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   // データ取得
   React.useEffect(() => {
@@ -102,6 +104,18 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
         },
       ],
     );
+  };
+
+  const handleToggleFavorite = () => {
+    if (!currentStudent || !tutor) return;
+
+    const wasFavorite = isFavorite(tutorId);
+    toggleFavorite(tutorId, currentStudent.id);
+
+    const action = wasFavorite ? '削除' : '追加';
+    setTimeout(() => {
+      Alert.alert('お気に入り', `${tutor.name}さんをお気に入り${action}しました`, [{ text: 'OK' }]);
+    }, 100);
   };
 
   const formatRate = (rate: number) => {
@@ -222,23 +236,37 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* マッチング申請ボタン */}
+      {/* マッチング申請とお気に入りボタン */}
       <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={[styles.matchButton, isLoading && styles.matchButtonDisabled]}
-          onPress={handleMatchingRequest}
-          disabled={isLoading}
-        >
-          <MaterialIcons
-            name="favorite"
-            size={20}
-            color={colors.white}
-            style={styles.matchButtonIcon}
-          />
-          <Text style={styles.matchButtonText}>
-            {isLoading ? 'マッチング申請中...' : `マッチング申請 (${MATCHING_COST}コイン)`}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={styles.favoriteButtonBottom}
+            onPress={handleToggleFavorite}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <MaterialIcons
+              name={isFavorite(tutorId) ? 'favorite' : 'favorite-border'}
+              size={24}
+              color={isFavorite(tutorId) ? colors.error : colors.gray600}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.matchButton, isLoading && styles.matchButtonDisabled]}
+            onPress={handleMatchingRequest}
+            disabled={isLoading}
+          >
+            <MaterialIcons
+              name="person-add"
+              size={20}
+              color={colors.white}
+              style={styles.matchButtonIcon}
+            />
+            <Text style={styles.matchButtonText}>
+              {isLoading ? 'マッチング申請中...' : `マッチング申請 (${MATCHING_COST}コイン)`}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <BottomSheet isOpen={isSheetOpen} onClose={toggleSheet} height={560}>
@@ -457,20 +485,35 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 0,
     margin: 0,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  favoriteButtonBottom: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: colors.gray300,
+    marginRight: spacing.md,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   matchButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderTopLeftRadius: borderRadius.lg,
-    borderTopRightRadius: borderRadius.lg,
-    borderBottomLeftRadius: borderRadius.lg,
-    borderBottomRightRadius: borderRadius.lg,
-    width: '100%',
-    alignSelf: 'stretch',
-    overflow: 'hidden',
+    borderRadius: borderRadius.lg,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -489,6 +532,15 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes?.body || 16,
     color: colors.white,
     fontWeight: '600',
+  },
+  favoriteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gray100,
+    marginRight: spacing.sm,
   },
   headerRightButton: {
     width: 40,

@@ -5,9 +5,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import ChatStackNavigator from './ChatStackNavigator';
 import HomeStackNavigator from './HomeStackNavigator';
+import MyPageStackNavigator from './MyPageStackNavigator';
 import SearchStackNavigator from './SearchStackNavigator';
 import LessonScreen from '../screens/LessonScreen';
-import MyPageScreen from '../screens/MyPageScreen';
 import { colors } from '../styles/theme';
 
 const Tab = createBottomTabNavigator();
@@ -96,7 +96,7 @@ export default function TabNavigator() {
         />
         <Tab.Screen
           name="MyPage"
-          component={MyPageScreen}
+          component={MyPageStackNavigator}
           options={{
             tabBarLabel: 'マイページ',
             tabBarIcon: ({ color, size }) => (
