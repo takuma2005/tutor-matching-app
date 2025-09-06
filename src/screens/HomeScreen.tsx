@@ -13,7 +13,6 @@ import { HomeStackParamList } from '../navigation/HomeStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 import HomeHeader from '@/components/home/HomeHeader';
-import QuickActions from '@/components/home/QuickActions';
 import TutorsSection from '@/components/home/TutorsSection';
 import UpcomingLessonCard from '@/components/home/UpcomingLessonCard';
 import { useHomeData } from '@/hooks/useHomeData';
@@ -27,7 +26,7 @@ type Props = {
 export default function HomeScreen({ navigation }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user, refreshCoins } = useUser();
-  const { recommendedTutors, upcoming } = useHomeData();
+  const { recommendedTutors, newTutors, upcoming } = useHomeData();
 
   // 画面フォーカス時にコイン残高をリフレッシュ
   useFocusEffect(
@@ -65,9 +64,9 @@ export default function HomeScreen({ navigation }: Props) {
 
         {/* Rounded transition with overlaid cards */}
         <View style={styles.contentContainer}>
-          {/* 授業の予定 */}
-          <View style={[styles.section, styles.sectionGap]}>
-            <View style={styles.sectionHeader}>
+          {/* 授業の予定（余白をやや詰める） */}
+          <View style={[styles.section, styles.scheduleSection]}>
+            <View style={[styles.sectionHeader, styles.sectionHeaderTight]}>
               <Text style={styles.sectionTitle}>授業の予定</Text>
             </View>
             <UpcomingLessonCard
@@ -76,17 +75,21 @@ export default function HomeScreen({ navigation }: Props) {
             />
           </View>
 
-          {/* Quick Action Card - overlaid */}
-          <QuickActions
-            onPressSearch={() => console.log('Search function not implemented in Home stack')}
-            onPressReserve={() => {}}
-            onPressFavorite={() => navigation.navigate('Favorite')}
-            onPressResults={() => {}}
+          {/* Tutors Section: おすすめの先輩 */}
+          <TutorsSection
+            title="おすすめの先輩"
+            tutors={recommendedTutors}
+            isFavorite={isFavorite}
+            onPressTutor={handleTutorPress}
+            onToggleFavorite={(id) => {
+              if (user) toggleFavorite(id, user.id);
+            }}
           />
 
-          {/* Tutors Section */}
+          {/* Tutors Section: 新着の先輩 */}
           <TutorsSection
-            tutors={recommendedTutors}
+            title="新着の先輩"
+            tutors={newTutors}
             isFavorite={isFavorite}
             onPressTutor={handleTutorPress}
             onToggleFavorite={(id) => {
@@ -290,6 +293,12 @@ const styles = StyleSheet.create({
   sectionGap: {
     marginBottom: spacing.md,
   },
+  scheduleSection: {
+    paddingVertical: spacing.sm,
+  },
+  sectionHeaderTight: {
+    marginBottom: spacing.sm + spacing.xs,
+  },
 
   quickActionCard: {
     backgroundColor: colors.white,
@@ -327,7 +336,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   section: {
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.white,
   },
   sectionHeader: {
@@ -335,7 +344,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm + spacing.xs,
   },
   sectionTitle: {
     fontSize: typography.sizes?.h4 || 18,

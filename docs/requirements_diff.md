@@ -4,6 +4,40 @@
 
 ## 変更履歴
 
+### 2025-09-06（ホームUI/コイン設計/テスト安定化）
+
+- ホームUI
+  - クイックアクションを一旦非表示
+  - おすすめの先輩の下に「新着の先輩」セクションを追加（created_at/updated_at の新しい順、上位3件）
+  - セクション見出しとオブジェクト間の余白を統一（marginBottom: sm + xs、セクションpadding: sm）
+  - 授業の予定の上下余白を調整し、各セクション間隔と統一
+- お気に入り
+  - FavoriteScreen: student.id → user.id → 'local' のフォールバックで再追加不可問題を解消
+  - isFavorite と onFavoritePress による表示・トグルを統一（TutorCard）
+- コイン設計（モック→本番差し替え容易化）
+  - ドメイン層を導入: CoinGateway（抽象化）/ CoinManager（アプリケーションサービス）/ coinEvents（PubSub）
+    - CoinGateway: getBalance / purchase / applyDelta / getHistory を定義
+    - MockCoinGateway 実装: 既存 mockCoinService を内部利用
+    - CoinManager: purchase/applyDelta/syncBalance 後に coinEvents で残高通知
+    - UserContext: coinEvents を購読し user.coins を即時同期
+  - 画面適用
+    - CoinManagementScreen: CoinManager.purchase を利用、購入後に履歴・残高を再取得
+    - LessonRequestScreen: 授業申請成功後に CoinManager.syncBalance（真値同期）
+    - TutorDetailScreen: CoinManager.applyDelta(..., 'matching') で即時反映（モックでは取引記録）
+- 認証（モック利便性）
+  - モック環境で起動時にデフォルトユーザーへ自動ログイン → 「プロフィールが見つかりません」軽減
+- テスト
+  - UI変更に伴い HomeScreen のスナップショット/テキスト検証を更新
+
+影響ファイル（主な）
+
+- src/domain/coin/{types.ts, mockGateway.ts, coinEvents.ts, coinManager.ts, index.ts}（新規）
+- src/screens/{HomeScreen.tsx, CoinManagementScreen.tsx, LessonRequestScreen.tsx, TutorDetailScreen.tsx}
+- src/components/home/TutorsSection.tsx
+- src/hooks/useHomeData.ts
+- src/contexts/{UserContext.tsx, AuthContext.tsx}
+- テスト: src/screens/**tests**/HomeScreen\*.tsx
+
 ### 2025-09-06（UI/ナビゲーション/ログ抑制）
 
 #### 検索（探す）

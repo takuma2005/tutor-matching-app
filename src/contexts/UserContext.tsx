@@ -5,6 +5,7 @@ import { getApiClient } from '../services/api/mock';
 import type { Student } from '../services/api/types';
 
 import { useAuth } from '@/contexts/AuthContext';
+import coinEvents from '@/domain/coin/coinEvents';
 
 export interface UserProfile {
   id: string;
@@ -26,6 +27,7 @@ interface UserContextType {
   loadUserProfile: () => Promise<void>;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<boolean>;
   refreshCoins: () => Promise<void>;
+  updateCoins: (value: number) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -146,10 +148,22 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
+  const updateCoins = (value: number) => {
+    setUser((prev) => (prev ? { ...prev, coins: value } : prev));
+  };
+
   useEffect(() => {
     // 認証ユーザの変化に合わせてロード
     loadUserProfile();
   }, [authUser?.id]);
+
+  // Coin domain events -> reflect globally
+  useEffect(() => {
+    const unsub = coinEvents.onBalanceChanged((balance) => {
+      setUser((prev) => (prev ? { ...prev, coins: balance } : prev));
+    });
+    return unsub;
+  }, []);
 
   const contextValue: UserContextType = {
     user,
@@ -158,6 +172,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     loadUserProfile,
     updateUserProfile,
     refreshCoins,
+    updateCoins,
   };
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;

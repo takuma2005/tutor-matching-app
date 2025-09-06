@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     borderRadius: borderRadius.lg,
     padding: spacing.sm,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,

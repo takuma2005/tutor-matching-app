@@ -123,7 +123,7 @@ describe('HomeScreen', () => {
       expect(screen.getByTestId('header-coin-button')).toBeTruthy();
     });
 
-    it('should display quick action buttons', () => {
+    it('should display new tutors section', () => {
       render(
         <SafeAreaProvider>
           <AuthProvider>
@@ -136,10 +136,7 @@ describe('HomeScreen', () => {
         </SafeAreaProvider>,
       );
 
-      expect(screen.getByText('探す')).toBeTruthy();
-      expect(screen.getByText('予約')).toBeTruthy();
-      expect(screen.getByText('お気に入り')).toBeTruthy();
-      expect(screen.getByText('成果')).toBeTruthy();
+      expect(screen.getByText('新着の先輩')).toBeTruthy();
     });
 
     it('should display recommended tutors section', () => {
@@ -156,22 +153,6 @@ describe('HomeScreen', () => {
       );
 
       expect(screen.getByText('おすすめの先輩')).toBeTruthy();
-    });
-
-    // NOTE: クイックアクションのナビゲーションは未実装のため、存在のみ確認
-    it('should show quick action – search', () => {
-      render(
-        <SafeAreaProvider>
-          <AuthProvider>
-            <UserProvider>
-              <FavoritesProvider>
-                <HomeScreen navigation={mockNavigation as any} />
-              </FavoritesProvider>
-            </UserProvider>
-          </AuthProvider>
-        </SafeAreaProvider>,
-      );
-      expect(screen.getByText('探す')).toBeTruthy();
     });
   });
 });

@@ -235,23 +235,28 @@ exports[`HomeScreen snapshot matches snapshot 1`] = `
             [
               {
                 "backgroundColor": "#ffffff",
-                "paddingVertical": 16,
+                "paddingVertical": 8,
               },
               {
-                "marginBottom": 16,
+                "paddingVertical": 8,
               },
             ]
           }
         >
           <View
             style={
-              {
-                "alignItems": "center",
-                "flexDirection": "row",
-                "justifyContent": "space-between",
-                "marginBottom": 16,
-                "paddingHorizontal": 16,
-              }
+              [
+                {
+                  "alignItems": "center",
+                  "flexDirection": "row",
+                  "justifyContent": "space-between",
+                  "marginBottom": 12,
+                  "paddingHorizontal": 16,
+                },
+                {
+                  "marginBottom": 12,
+                },
+              ]
             }
           >
             <Text
@@ -282,309 +287,7 @@ exports[`HomeScreen snapshot matches snapshot 1`] = `
           style={
             {
               "backgroundColor": "#ffffff",
-              "borderRadius": 16,
-              "elevation": 4,
-              "marginBottom": 32,
-              "marginHorizontal": 16,
-              "padding": 24,
-              "shadowColor": "#000000",
-              "shadowOffset": {
-                "height": 2,
-                "width": 0,
-              },
-              "shadowOpacity": 0.1,
-              "shadowRadius": 8,
-            }
-          }
-        >
-          <View
-            style={
-              {
-                "flexDirection": "row",
-                "justifyContent": "space-around",
-              }
-            }
-            testID="quick-actions"
-          >
-            <View
-              accessibilityState={
-                {
-                  "busy": undefined,
-                  "checked": undefined,
-                  "disabled": undefined,
-                  "expanded": undefined,
-                  "selected": undefined,
-                }
-              }
-              accessibilityValue={
-                {
-                  "max": undefined,
-                  "min": undefined,
-                  "now": undefined,
-                  "text": undefined,
-                }
-              }
-              accessible={true}
-              collapsable={false}
-              focusable={true}
-              onClick={[Function]}
-              onResponderGrant={[Function]}
-              onResponderMove={[Function]}
-              onResponderRelease={[Function]}
-              onResponderTerminate={[Function]}
-              onResponderTerminationRequest={[Function]}
-              onStartShouldSetResponder={[Function]}
-              style={
-                {
-                  "alignItems": "center",
-                  "flex": 1,
-                  "opacity": 1,
-                }
-              }
-            >
-              <View
-                style={
-                  {
-                    "alignItems": "center",
-                    "backgroundColor": "#3b82f615",
-                    "borderRadius": 12,
-                    "height": 48,
-                    "justifyContent": "center",
-                    "marginBottom": 8,
-                    "width": 48,
-                  }
-                }
-              >
-                <MaterialIcons
-                  color="#3b82f6"
-                  name="search"
-                  size={24}
-                />
-              </View>
-              <Text
-                style={
-                  {
-                    "color": "#374151",
-                    "fontSize": 12,
-                    "fontWeight": "500",
-                    "textAlign": "center",
-                  }
-                }
-              >
-                探す
-              </Text>
-            </View>
-            <View
-              accessibilityState={
-                {
-                  "busy": undefined,
-                  "checked": undefined,
-                  "disabled": undefined,
-                  "expanded": undefined,
-                  "selected": undefined,
-                }
-              }
-              accessibilityValue={
-                {
-                  "max": undefined,
-                  "min": undefined,
-                  "now": undefined,
-                  "text": undefined,
-                }
-              }
-              accessible={true}
-              collapsable={false}
-              focusable={true}
-              onClick={[Function]}
-              onResponderGrant={[Function]}
-              onResponderMove={[Function]}
-              onResponderRelease={[Function]}
-              onResponderTerminate={[Function]}
-              onResponderTerminationRequest={[Function]}
-              onStartShouldSetResponder={[Function]}
-              style={
-                {
-                  "alignItems": "center",
-                  "flex": 1,
-                  "opacity": 1,
-                }
-              }
-            >
-              <View
-                style={
-                  {
-                    "alignItems": "center",
-                    "backgroundColor": "#3b82f615",
-                    "borderRadius": 12,
-                    "height": 48,
-                    "justifyContent": "center",
-                    "marginBottom": 8,
-                    "width": 48,
-                  }
-                }
-              >
-                <MaterialIcons
-                  color="#3b82f6"
-                  name="school"
-                  size={24}
-                />
-              </View>
-              <Text
-                style={
-                  {
-                    "color": "#374151",
-                    "fontSize": 12,
-                    "fontWeight": "500",
-                    "textAlign": "center",
-                  }
-                }
-              >
-                予約
-              </Text>
-            </View>
-            <View
-              accessibilityState={
-                {
-                  "busy": undefined,
-                  "checked": undefined,
-                  "disabled": undefined,
-                  "expanded": undefined,
-                  "selected": undefined,
-                }
-              }
-              accessibilityValue={
-                {
-                  "max": undefined,
-                  "min": undefined,
-                  "now": undefined,
-                  "text": undefined,
-                }
-              }
-              accessible={true}
-              collapsable={false}
-              focusable={true}
-              onClick={[Function]}
-              onResponderGrant={[Function]}
-              onResponderMove={[Function]}
-              onResponderRelease={[Function]}
-              onResponderTerminate={[Function]}
-              onResponderTerminationRequest={[Function]}
-              onStartShouldSetResponder={[Function]}
-              style={
-                {
-                  "alignItems": "center",
-                  "flex": 1,
-                  "opacity": 1,
-                }
-              }
-            >
-              <View
-                style={
-                  {
-                    "alignItems": "center",
-                    "backgroundColor": "#3b82f615",
-                    "borderRadius": 12,
-                    "height": 48,
-                    "justifyContent": "center",
-                    "marginBottom": 8,
-                    "width": 48,
-                  }
-                }
-              >
-                <MaterialIcons
-                  color="#3b82f6"
-                  name="favorite"
-                  size={24}
-                />
-              </View>
-              <Text
-                style={
-                  {
-                    "color": "#374151",
-                    "fontSize": 12,
-                    "fontWeight": "500",
-                    "textAlign": "center",
-                  }
-                }
-              >
-                お気に入り
-              </Text>
-            </View>
-            <View
-              accessibilityState={
-                {
-                  "busy": undefined,
-                  "checked": undefined,
-                  "disabled": undefined,
-                  "expanded": undefined,
-                  "selected": undefined,
-                }
-              }
-              accessibilityValue={
-                {
-                  "max": undefined,
-                  "min": undefined,
-                  "now": undefined,
-                  "text": undefined,
-                }
-              }
-              accessible={true}
-              collapsable={false}
-              focusable={true}
-              onClick={[Function]}
-              onResponderGrant={[Function]}
-              onResponderMove={[Function]}
-              onResponderRelease={[Function]}
-              onResponderTerminate={[Function]}
-              onResponderTerminationRequest={[Function]}
-              onStartShouldSetResponder={[Function]}
-              style={
-                {
-                  "alignItems": "center",
-                  "flex": 1,
-                  "opacity": 1,
-                }
-              }
-            >
-              <View
-                style={
-                  {
-                    "alignItems": "center",
-                    "backgroundColor": "#3b82f615",
-                    "borderRadius": 12,
-                    "height": 48,
-                    "justifyContent": "center",
-                    "marginBottom": 8,
-                    "width": 48,
-                  }
-                }
-              >
-                <MaterialIcons
-                  color="#3b82f6"
-                  name="assessment"
-                  size={24}
-                />
-              </View>
-              <Text
-                style={
-                  {
-                    "color": "#374151",
-                    "fontSize": 12,
-                    "fontWeight": "500",
-                    "textAlign": "center",
-                  }
-                }
-              >
-                成果
-              </Text>
-            </View>
-          </View>
-        </View>
-        <View
-          style={
-            {
-              "backgroundColor": "#ffffff",
-              "paddingVertical": 16,
+              "paddingVertical": 8,
             }
           }
         >
@@ -594,7 +297,7 @@ exports[`HomeScreen snapshot matches snapshot 1`] = `
                 "alignItems": "center",
                 "flexDirection": "row",
                 "justifyContent": "space-between",
-                "marginBottom": 16,
+                "marginBottom": 12,
                 "paddingHorizontal": 16,
               }
             }
@@ -610,59 +313,38 @@ exports[`HomeScreen snapshot matches snapshot 1`] = `
             >
               おすすめの先輩
             </Text>
-            <View
-              accessibilityState={
-                {
-                  "busy": undefined,
-                  "checked": undefined,
-                  "disabled": undefined,
-                  "expanded": undefined,
-                  "selected": undefined,
-                }
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "backgroundColor": "#ffffff",
+              "paddingVertical": 8,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "marginBottom": 12,
+                "paddingHorizontal": 16,
               }
-              accessibilityValue={
-                {
-                  "max": undefined,
-                  "min": undefined,
-                  "now": undefined,
-                  "text": undefined,
-                }
-              }
-              accessible={true}
-              collapsable={false}
-              focusable={false}
-              onClick={[Function]}
-              onResponderGrant={[Function]}
-              onResponderMove={[Function]}
-              onResponderRelease={[Function]}
-              onResponderTerminate={[Function]}
-              onResponderTerminationRequest={[Function]}
-              onStartShouldSetResponder={[Function]}
+            }
+          >
+            <Text
               style={
                 {
-                  "alignItems": "center",
-                  "flexDirection": "row",
-                  "opacity": 1,
+                  "color": "#111827",
+                  "fontSize": 18,
+                  "fontWeight": "600",
                 }
               }
             >
-              <Text
-                style={
-                  {
-                    "color": "#3b82f6",
-                    "fontSize": 12,
-                    "marginRight": 2,
-                  }
-                }
-              >
-                すべて見る
-              </Text>
-              <MaterialIcons
-                color="#3b82f6"
-                name="arrow-forward"
-                size={16}
-              />
-            </View>
+              新着の先輩
+            </Text>
           </View>
         </View>
         <View

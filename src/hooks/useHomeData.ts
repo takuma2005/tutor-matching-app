@@ -8,6 +8,7 @@ export type Upcoming = { lesson: Lesson; tutor?: Tutor } | null;
 export function useHomeData() {
   const api = useMemo(() => getApiClient(), []);
   const [recommendedTutors, setRecommendedTutors] = useState<Tutor[]>([]);
+  const [newTutors, setNewTutors] = useState<Tutor[]>([]);
   const [upcoming, setUpcoming] = useState<Upcoming>(null);
 
   useEffect(() => {
@@ -21,6 +22,13 @@ export function useHomeData() {
         const tutors = tutorsResp?.success ? tutorsResp.data : [];
         const recommended = [...tutors].sort((a, b) => b.rating - a.rating).slice(0, 3);
         setRecommendedTutors(recommended);
+
+        const createdTime = (t: Tutor) => {
+          const c = (t as any).created_at || (t as any).updated_at || 0;
+          return new Date(c).getTime();
+        };
+        const newest = [...tutors].sort((a, b) => createdTime(b) - createdTime(a)).slice(0, 3);
+        setNewTutors(newest);
 
         if (lessonsResp?.success) {
           const upcomingList = [...lessonsResp.data]
@@ -50,5 +58,5 @@ export function useHomeData() {
     };
   }, [api]);
 
-  return { recommendedTutors, upcoming } as const;
+  return { recommendedTutors, newTutors, upcoming } as const;
 }

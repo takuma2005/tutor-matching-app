@@ -7,6 +7,7 @@ import type { Tutor } from '@/services/api/types';
 import { colors, spacing, typography, borderRadius } from '@/styles/theme';
 
 type Props = {
+  title?: string;
   tutors: Tutor[];
   isFavorite: (tutorId: string) => boolean;
   onPressTutor: (tutorId: string) => void;
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export default function TutorsSection({
+  title = 'おすすめの先輩',
   tutors,
   isFavorite,
   onPressTutor,
@@ -24,11 +26,13 @@ export default function TutorsSection({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>おすすめの先輩</Text>
-        <TouchableOpacity style={styles.seeAllButton} onPress={onPressSeeAll}>
-          <Text style={styles.seeAllText}>すべて見る</Text>
-          <MaterialIcons name="arrow-forward" size={16} color={colors.primary} />
-        </TouchableOpacity>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {onPressSeeAll && (
+          <TouchableOpacity style={styles.seeAllButton} onPress={onPressSeeAll}>
+            <Text style={styles.seeAllText}>すべて見る</Text>
+            <MaterialIcons name="arrow-forward" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {tutors.map((tutor) => (
@@ -57,7 +61,7 @@ export default function TutorsSection({
 
 const styles = StyleSheet.create({
   section: {
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.white,
   },
   sectionHeader: {
@@ -65,7 +69,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm + spacing.xs,
   },
   sectionTitle: {
     fontSize: typography.sizes?.h4 || 18,

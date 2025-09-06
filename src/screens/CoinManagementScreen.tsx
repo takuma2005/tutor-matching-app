@@ -9,6 +9,8 @@ import Badge from '../components/common/Badge';
 import BottomSheet from '../components/common/BottomSheet';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import { useUser } from '@/contexts/UserContext';
+import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { CoinTransaction } from '@/services/api/types';
 
@@ -36,6 +38,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [balance, setBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
+  const { updateCoins } = useUser();
 
   React.useEffect(() => {
     const api = getApiClient();
@@ -72,23 +75,24 @@ export default function CoinManagementScreen({ navigation }: Props) {
         {
           text: '購入する',
           onPress: async () => {
+            setIsLoading(true);
             try {
-              setIsLoading(true);
-              const res = await api.coin.purchaseCoins('student-1', amount, 'pm_card_visa');
-              if (res.success) {
-                const [bal, hist] = await Promise.all([
-                  api.coin.getBalance('student-1'),
-                  api.coin.getTransactionHistory('student-1', 1, 50),
-                ]);
-                if (bal.success) setBalance(bal.data.balance);
-                if (hist.success) setTransactions(hist.data);
-                Alert.alert(
-                  '購入完了',
-                  `${coinPackage.coins}${coinPackage.bonus ? ` + ${coinPackage.bonus}` : ''}コインを購入しました！`,
-                );
-              } else {
-                Alert.alert('エラー', res.error ?? '購入に失敗しました');
+              // Use domain manager to keep mock/prod switchable
+              await CoinManager.purchase('student-1', amount, 'pm_card_visa');
+              const [bal, hist] = await Promise.all([
+                api.coin.getBalance('student-1'),
+                api.coin.getTransactionHistory('student-1', 1, 50),
+              ]);
+              if (bal.success) {
+                setBalance(bal.data.balance);
               }
+              if (hist.success) setTransactions(hist.data);
+              Alert.alert(
+                '購入完了',
+                `${coinPackage.coins}${coinPackage.bonus ? ` + ${coinPackage.bonus}` : ''}コインを購入しました！`,
+              );
+            } catch (e: any) {
+              Alert.alert('エラー', e?.message ?? '購入に失敗しました');
             } finally {
               setIsLoading(false);
             }

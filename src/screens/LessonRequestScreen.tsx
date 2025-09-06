@@ -16,6 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import { useUser } from '@/contexts/UserContext';
+import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { Tutor, Student } from '@/services/api/types';
 
@@ -41,6 +43,7 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
   const { tutorId } = route.params;
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
+  const { updateCoins } = useUser();
 
   React.useEffect(() => {
     const api = getApiClient();
@@ -176,26 +179,43 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
         { text: 'キャンセル', style: 'cancel' },
         {
           text: '申請する',
-          onPress: () => {
-            setIsLoading(true);
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const api = getApiClient();
+              const payload = {
+                tutor_id: tutor.id,
+                student_id: currentStudent?.id ?? 'student-1',
+                subject: request.subject,
+                scheduled_at: request.date.toISOString(),
+                duration_minutes: request.duration,
+                coin_cost: request.totalCost,
+                lesson_notes: request.notes,
+              } as const;
 
-            // モック申請処理
-            setTimeout(() => {
-              setIsLoading(false);
-              Alert.alert(
-                '申請完了',
-                `${tutor.name}さんに授業申請を送信しました！\n${request.totalCost}コインが仮押さえされました。\n\n相手の承認をお待ちください。`,
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => {
-                      // チャット画面に戻る
-                      navigation.goBack();
+              const res = await api.student.bookLesson(tutor.id, payload as any);
+              if (res.success) {
+                // Sync balance from backend to avoid drift
+                await CoinManager.syncBalance(currentStudent?.id ?? 'student-1');
+
+                Alert.alert(
+                  '申請完了',
+                  `${tutor.name}さんに授業申請を送信しました！\n${request.totalCost}コインが仮押さえされました。\n\n相手の承認をお待ちください。`,
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        navigation.goBack();
+                      },
                     },
-                  },
-                ],
-              );
-            }, 2000);
+                  ],
+                );
+              } else {
+                Alert.alert('エラー', res.error ?? '申請に失敗しました');
+              }
+            } finally {
+              setIsLoading(false);
+            }
           },
         },
       ],

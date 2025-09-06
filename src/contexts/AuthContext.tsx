@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-import { getApiClient } from '@/services/api/mock';
+import { getApiClient, API_CONFIG, mockStudents } from '@/services/api/mock';
 import { User, Student } from '@/services/api/types';
 
 interface AuthContextType {
@@ -56,6 +56,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const studentResponse = await apiClient.student.getProfile(response.data.id);
           if (studentResponse.success) {
             setStudent(studentResponse.data);
+          }
+        } else if (API_CONFIG.USE_MOCK) {
+          // モック環境ではデフォルトユーザーで自動ログイン
+          const def = mockStudents?.[0];
+          if (def) {
+            const mockUser: User = {
+              id: def.id,
+              email: def.email,
+              name: def.name,
+              created_at: def.created_at,
+              updated_at: def.updated_at,
+            };
+            setUser(mockUser);
+            const studentResponse = await apiClient.student.getProfile(mockUser.id);
+            if (studentResponse.success) {
+              setStudent(studentResponse.data);
+            }
           }
         }
       } catch (error) {

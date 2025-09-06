@@ -11,6 +11,8 @@ import type { HomeStackParamList } from '../navigation/HomeStackNavigator';
 import type { SearchStackParamList } from '../navigation/SearchStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import { useUser } from '@/contexts/UserContext';
+import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { Tutor, Student } from '@/services/api/types';
 
@@ -26,6 +28,7 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { updateCoins } = useUser();
 
   // データ取得
   React.useEffect(() => {
@@ -91,6 +94,13 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
           text: '申請する',
           onPress: () => {
             setIsLoading(true);
+            // ドメイン経由で即時反映（モックはトランザクションを記録し、残高も更新）
+            CoinManager.applyDelta(
+              currentStudent?.id ?? 'student-1',
+              -MATCHING_COST,
+              'matching',
+              'マッチング申請',
+            );
             // 実際のAPIコールをシミュレート
             setTimeout(() => {
               setIsLoading(false);
@@ -99,7 +109,7 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
                 `${tutor.name}さんにマッチング申請を送信しました！\n相手の返答をお待ちください。`,
                 [{ text: 'OK', onPress: () => navigation.goBack() }],
               );
-            }, 2000);
+            }, 1200);
           },
         },
       ],
