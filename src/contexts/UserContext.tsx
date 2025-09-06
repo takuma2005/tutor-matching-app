@@ -4,6 +4,8 @@ import { Alert } from 'react-native';
 import { getApiClient } from '../services/api/mock';
 import type { Student } from '../services/api/types';
 
+import { useAuth } from '@/contexts/AuthContext';
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -46,14 +48,21 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const refreshingRef = React.useRef(false);
   const lastRefreshRef = React.useRef<number>(0);
+  const { user: authUser } = useAuth();
 
   const loadUserProfile = async () => {
+    const userId = authUser?.id;
+    if (!userId) {
+      // 認証ユーザがいない場合は何もしない（ゲスト）
+      setUser(null);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
 
       const api = getApiClient();
-      const response = await api.student.getProfile('student-1');
+      const response = await api.student.getProfile(userId);
 
       if (response?.success && response.data) {
         const student = response.data;
@@ -69,6 +78,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           avatar: student.avatar,
           coins: student.coins || 0,
         });
+      } else {
+        setUser(null);
       }
     } catch (err) {
       console.error('Failed to load user profile:', err);
@@ -136,8 +147,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
+    // 認証ユーザの変化に合わせてロード
     loadUserProfile();
-  }, []);
+  }, [authUser?.id]);
 
   const contextValue: UserContextType = {
     user,

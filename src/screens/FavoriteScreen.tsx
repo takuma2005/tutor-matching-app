@@ -9,8 +9,9 @@ import TutorCardSkeleton from '../components/tutor/TutorCardSkeleton';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import { useAuth } from '@/contexts/AuthContext';
 import { getApiClient } from '@/services/api/mock';
-import type { Tutor, Student } from '@/services/api/types';
+import type { Tutor } from '@/services/api/types';
 
 type FavoriteStackParamList = {
   FavoriteMain: undefined;
@@ -26,31 +27,28 @@ type Props = {
 };
 
 export default function FavoriteScreen({ navigation }: Props) {
-  const { favorites, removeFavorite } = useFavorites();
+  const { favorites, addFavorite, removeFavorite, isFavorite } = useFavorites();
+  const { user: authUser, student } = useAuth();
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [favoriteTutors, setFavoriteTutors] = useState<Tutor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
 
+  // 初回ロード時のスナップショットで一覧を構築し、その後は即時には消さない
   useEffect(() => {
     const api = getApiClient();
     setIsLoading(true);
 
-    Promise.all([api.student.getProfile('student-1'), api.student.searchTutors(undefined, 1, 100)])
-      .then(([profileResp, tutorsResp]) => {
-        if (profileResp?.success) {
-          setCurrentStudent(profileResp.data);
-        }
+    api.student
+      .searchTutors(undefined, 1, 100)
+      .then((tutorsResp) => {
         if (tutorsResp?.success) {
           const allTutors = tutorsResp.data;
           setTutors(allTutors);
 
-          // お気に入りのセンパイのみを抽出
           const favTutors = favorites
             .map((fav) => allTutors.find((tutor) => tutor.id === fav.tutorId))
             .filter((tutor): tutor is Tutor => tutor !== undefined)
             .sort((a, b) => {
-              // お気に入りに追加された日時でソート（新しい順）
               const favA = favorites.find((f) => f.tutorId === a.id);
               const favB = favorites.find((f) => f.tutorId === b.id);
               return (favB?.addedAt.getTime() || 0) - (favA?.addedAt.getTime() || 0);
@@ -60,14 +58,19 @@ export default function FavoriteScreen({ navigation }: Props) {
         }
       })
       .finally(() => setIsLoading(false));
-  }, [favorites]);
+  }, []);
 
   const handleTutorPress = (tutorId: string) => {
     navigation.navigate('TutorDetail', { tutorId });
   };
 
-  const handleRemoveFavorite = (tutorId: string) => {
-    removeFavorite(tutorId);
+  const handleToggleFavorite = (tutorId: string) => {
+    if (isFavorite(tutorId)) {
+      removeFavorite(tutorId);
+    } else {
+      const sid = student?.id ?? authUser?.id ?? 'local';
+      addFavorite(tutorId, sid);
+    }
   };
 
   const renderTutor = ({ item }: { item: Tutor }) => (
@@ -83,17 +86,11 @@ export default function FavoriteScreen({ navigation }: Props) {
         totalLessons={item.total_lessons}
         onlineAvailable={item.online_available ?? false}
         avatarUrl={item.avatar_url}
+        isFavorite={isFavorite(item.id)}
+        onFavoritePress={() => handleToggleFavorite(item.id)}
         onPress={() => handleTutorPress(item.id)}
         onDetailPress={() => handleTutorPress(item.id)}
       />
-      {/* お気に入りから削除ボタン */}
-      <TouchableOpacity
-        style={styles.removeButton}
-        onPress={() => handleRemoveFavorite(item.id)}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <MaterialIcons name="favorite" size={16} color={colors.error} />
-      </TouchableOpacity>
     </View>
   );
 
@@ -216,25 +213,6 @@ const styles = StyleSheet.create({
   },
   tutorCardContainer: {
     position: 'relative',
-  },
-  removeButton: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.lg + spacing.sm,
-    zIndex: 1,
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.full || 999,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: colors.gray100,
   },
   emptyContainer: {
     flex: 1,

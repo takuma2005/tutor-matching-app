@@ -12,9 +12,12 @@ import { useUser } from '../contexts/UserContext';
 import { HomeStackParamList } from '../navigation/HomeStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
-import { getApiClient } from '@/services/api/mock';
+import HomeHeader from '@/components/home/HomeHeader';
+import QuickActions from '@/components/home/QuickActions';
+import TutorsSection from '@/components/home/TutorsSection';
+import UpcomingLessonCard from '@/components/home/UpcomingLessonCard';
+import { useHomeData } from '@/hooks/useHomeData';
 import type { Tutor, Lesson } from '@/services/api/types';
-
 type HomeScreenNavigationProp = StackNavigationProp<HomeStackParamList, 'HomeMain'>;
 
 type Props = {
@@ -24,48 +27,7 @@ type Props = {
 export default function HomeScreen({ navigation }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user, refreshCoins } = useUser();
-  const [recommendedTutors, setRecommendedTutors] = useState<Tutor[]>([]);
-  const [upcoming, setUpcoming] = useState<{ lesson: Lesson; tutor?: Tutor } | null>(null);
-
-  useEffect(() => {
-    const api = getApiClient();
-    let isMounted = true;
-    Promise.all([
-      api.student.searchTutors(undefined, 1, 50),
-      api.student.getLessons({ status: 'scheduled' }, 1, 20),
-    ])
-      .then(([tutorsResp, lessonsResp]) => {
-        if (!isMounted) return;
-        const tutors = tutorsResp?.success ? tutorsResp.data : [];
-        const recommended = [...tutors].sort((a, b) => b.rating - a.rating).slice(0, 3);
-        setRecommendedTutors(recommended);
-
-        if (lessonsResp?.success) {
-          const upcomingList = [...lessonsResp.data]
-            .filter((l) => l.status === 'scheduled')
-            .sort(
-              (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
-            );
-          const now = Date.now();
-          const upcomingLesson =
-            upcomingList.find((l) => new Date(l.scheduled_at).getTime() >= now) ||
-            upcomingList[0] ||
-            null;
-          if (upcomingLesson) {
-            const tutor = tutors.find((t) => t.id === upcomingLesson.tutor_id);
-            setUpcoming({ lesson: upcomingLesson, tutor });
-          } else {
-            setUpcoming(null);
-          }
-        }
-      })
-      .catch(() => {
-        // noop
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const { recommendedTutors, upcoming } = useHomeData();
 
   // 画面フォーカス時にコイン残高をリフレッシュ
   useFocusEffect(
@@ -82,26 +44,11 @@ export default function HomeScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Fixed Header */}
-      <View style={styles.fixedHeader} testID="home-header">
-        <Text style={styles.appName}>センパイ</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.headerCoinButton}
-            onPress={() => navigation.navigate('CoinManagement')}
-            testID="header-coin-button"
-          >
-            <MaterialIcons name="account-balance-wallet" size={18} color={colors.warning} />
-            <Text style={styles.headerCoinText}>{(user?.coins ?? 0).toLocaleString()}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.notificationButton}
-            testID="notification-icon"
-            onPress={() => navigation.navigate('Notification')}
-          >
-            <MaterialIcons name="notifications" size={20} color={colors.gray700} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <HomeHeader
+        coins={user?.coins ?? 0}
+        onPressCoinManagement={() => navigation.navigate('CoinManagement')}
+        onPressNotification={() => navigation.navigate('Notification')}
+      />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <LinearGradient
@@ -123,111 +70,29 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>授業の予定</Text>
             </View>
-            {upcoming ? (
-              <View style={styles.lessonCard} testID="upcoming-lesson-card">
-                <View style={styles.lessonHeader}>
-                  <MaterialIcons name="event" size={18} color={colors.primary} />
-                  <Text style={styles.lessonTitle}>{upcoming.lesson.subject || 'レッスン'}</Text>
-                </View>
-                <View style={styles.lessonRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.lessonMeta}>
-                      {new Date(upcoming.lesson.scheduled_at).toLocaleString('ja-JP', {
-                        month: 'numeric',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </Text>
-                    <Text style={styles.lessonTutor}>
-                      先生:{' '}
-                      {upcoming.tutor ? upcoming.tutor.name : `ID: ${upcoming.lesson.tutor_id}`}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.lessonDetailButton}
-                    onPress={() => (navigation as any).navigate('Lesson')}
-                  >
-                    <Text style={styles.lessonDetailButtonText}>詳細を見る</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <Text style={styles.emptyLessonText}>次の授業はまだありません</Text>
-            )}
+            <UpcomingLessonCard
+              upcoming={upcoming}
+              onPressDetail={() => (navigation as any).navigate('Lesson')}
+            />
           </View>
 
           {/* Quick Action Card - overlaid */}
-          <View style={styles.quickActionCard}>
-            <View style={styles.quickActions} testID="quick-actions">
-              <TouchableOpacity
-                style={styles.quickActionItem}
-                onPress={() => console.log('Search function not implemented in Home stack')}
-              >
-                <View style={styles.quickActionIcon}>
-                  <MaterialIcons name="search" size={24} color={colors.primary} />
-                </View>
-                <Text style={styles.quickActionText}>探す</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.quickActionItem}>
-                <View style={styles.quickActionIcon}>
-                  <MaterialIcons name="school" size={24} color={colors.primary} />
-                </View>
-                <Text style={styles.quickActionText}>予約</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.quickActionItem}
-                onPress={() => navigation.navigate('Favorite')}
-              >
-                <View style={styles.quickActionIcon}>
-                  <MaterialIcons name="favorite" size={24} color={colors.primary} />
-                </View>
-                <Text style={styles.quickActionText}>お気に入り</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.quickActionItem}>
-                <View style={styles.quickActionIcon}>
-                  <MaterialIcons name="assessment" size={24} color={colors.primary} />
-                </View>
-                <Text style={styles.quickActionText}>成果</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <QuickActions
+            onPressSearch={() => console.log('Search function not implemented in Home stack')}
+            onPressReserve={() => {}}
+            onPressFavorite={() => navigation.navigate('Favorite')}
+            onPressResults={() => {}}
+          />
 
           {/* Tutors Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>おすすめの先輩</Text>
-              <TouchableOpacity style={styles.seeAllButton}>
-                <Text style={styles.seeAllText}>すべて見る</Text>
-                <MaterialIcons name="arrow-forward" size={16} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
-
-            {recommendedTutors.map((tutor) => (
-              <View key={tutor.id} style={styles.tutorCardWrapper}>
-                <TutorCard
-                  id={tutor.id}
-                  name={tutor.name}
-                  school={tutor.school ?? ''}
-                  grade={tutor.grade ?? ''}
-                  subjects={tutor.subjects_taught}
-                  hourlyRate={tutor.hourly_rate}
-                  rating={tutor.rating}
-                  totalLessons={tutor.total_lessons}
-                  onlineAvailable={tutor.online_available ?? false}
-                  avatarUrl={tutor.avatar_url}
-                  isFavorite={isFavorite(tutor.id)}
-                  onPress={() => handleTutorPress(tutor.id)}
-                  onDetailPress={() => handleTutorPress(tutor.id)}
-                  onFavoritePress={() => {
-                    if (user) {
-                      toggleFavorite(tutor.id, user.id);
-                    }
-                  }}
-                />
-              </View>
-            ))}
-          </View>
+          <TutorsSection
+            tutors={recommendedTutors}
+            isFavorite={isFavorite}
+            onPressTutor={handleTutorPress}
+            onToggleFavorite={(id) => {
+              if (user) toggleFavorite(id, user.id);
+            }}
+          />
 
           <View style={styles.bottomSpacing} />
         </View>

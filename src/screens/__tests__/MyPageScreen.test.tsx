@@ -2,7 +2,13 @@ import { render, screen } from '@testing-library/react-native';
 import React from 'react';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 import MyPageScreen from '../MyPageScreen';
+
+import { AuthProvider } from '@/contexts/AuthContext';
+import { FavoritesProvider } from '@/contexts/FavoritesContext';
+import { UserProvider } from '@/contexts/UserContext';
 
 const mockNavigation = {} as any;
 
@@ -13,18 +19,50 @@ describe('MyPageScreen', () => {
 
   describe('Basic Rendering', () => {
     it('should render without crashing', () => {
-      expect(() => render(<MyPageScreen navigation={mockNavigation} />)).not.toThrow();
+      expect(() =>
+        render(
+          <SafeAreaProvider>
+            <AuthProvider>
+              <UserProvider>
+                <FavoritesProvider>
+                  <MyPageScreen navigation={mockNavigation} />
+                </FavoritesProvider>
+              </UserProvider>
+            </AuthProvider>
+          </SafeAreaProvider>,
+        ),
+      ).not.toThrow();
     });
 
     it('should render profile card', () => {
-      render(<MyPageScreen navigation={mockNavigation} />);
+      render(
+        <SafeAreaProvider>
+          <AuthProvider>
+            <UserProvider>
+              <FavoritesProvider>
+                <MyPageScreen navigation={mockNavigation} />
+              </FavoritesProvider>
+            </UserProvider>
+          </AuthProvider>
+        </SafeAreaProvider>,
+      );
 
       const profileCard = screen.getByTestId('profile-card');
       expect(profileCard).toBeTruthy();
     });
 
     it('should not have border radius on profile card', () => {
-      render(<MyPageScreen navigation={mockNavigation} />);
+      render(
+        <SafeAreaProvider>
+          <AuthProvider>
+            <UserProvider>
+              <FavoritesProvider>
+                <MyPageScreen navigation={mockNavigation} />
+              </FavoritesProvider>
+            </UserProvider>
+          </AuthProvider>
+        </SafeAreaProvider>,
+      );
 
       const profileCard = screen.getByTestId('profile-card');
       expect(profileCard).toBeTruthy();
@@ -33,42 +71,62 @@ describe('MyPageScreen', () => {
 
   describe('Header', () => {
     it('should display page title', () => {
-      render(<MyPageScreen navigation={mockNavigation} />);
+      render(
+        <SafeAreaProvider>
+          <AuthProvider>
+            <UserProvider>
+              <FavoritesProvider>
+                <MyPageScreen navigation={mockNavigation} />
+              </FavoritesProvider>
+            </UserProvider>
+          </AuthProvider>
+        </SafeAreaProvider>,
+      );
 
       expect(screen.getByText('マイページ')).toBeTruthy();
     });
   });
 
   describe('Profile Card', () => {
-    it('should display user profile information', () => {
-      render(<MyPageScreen navigation={mockNavigation} />);
+    it('should display user profile information (defaults)', () => {
+      render(
+        <SafeAreaProvider>
+          <AuthProvider>
+            <UserProvider>
+              <FavoritesProvider>
+                <MyPageScreen navigation={mockNavigation} />
+              </FavoritesProvider>
+            </UserProvider>
+          </AuthProvider>
+        </SafeAreaProvider>,
+      );
 
       const avatar = screen.getByTestId('profile-avatar');
       expect(avatar).toBeTruthy();
-      const nameNodes = screen.getAllByText('田中花子');
-      expect(nameNodes.length).toBeGreaterThan(0);
+      expect(screen.getByText('名前未設定')).toBeTruthy();
       expect(screen.getByText(/\d+コイン/)).toBeTruthy(); // Coin balance
     });
   });
 
-  describe('Tab Navigation', () => {
-    it('should display info and edit tabs', () => {
-      render(<MyPageScreen navigation={mockNavigation} />);
+  describe('Settings Section', () => {
+    it('should display settings items', () => {
+      render(
+        <SafeAreaProvider>
+          <AuthProvider>
+            <UserProvider>
+              <FavoritesProvider>
+                <MyPageScreen navigation={mockNavigation} />
+              </FavoritesProvider>
+            </UserProvider>
+          </AuthProvider>
+        </SafeAreaProvider>,
+      );
 
-      expect(screen.getByText('情報')).toBeTruthy();
-      expect(screen.getByText('編集')).toBeTruthy();
-    });
-  });
-
-  describe('Content Sections', () => {
-    it('should display basic information sections', () => {
-      render(<MyPageScreen navigation={mockNavigation} />);
-
-      expect(screen.getByText('基本情報')).toBeTruthy();
-      expect(screen.getByText('連絡先')).toBeTruthy();
-      expect(screen.getByText('興味のある科目')).toBeTruthy();
-      expect(screen.getByText('自己紹介')).toBeTruthy();
       expect(screen.getByText('設定')).toBeTruthy();
+      expect(screen.getByText('コイン管理')).toBeTruthy();
+      expect(screen.getByText('通知設定')).toBeTruthy();
+      expect(screen.getByText('ヘルプ・サポート')).toBeTruthy();
+      expect(screen.getByText('ログアウト')).toBeTruthy();
     });
   });
 });

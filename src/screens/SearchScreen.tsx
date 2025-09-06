@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,15 +11,9 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import { SearchStackParamList } from '../navigation/SearchStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
-import { getApiClient } from '@/services/api/mock';
-import type { Tutor, Student } from '@/services/api/types';
-
-type FilterOptions = {
-  subject: string;
-  minRate: number;
-  maxRate: number;
-  onlineOnly: boolean;
-};
+import { useAuth } from '@/contexts/AuthContext';
+import { useTutorSearch } from '@/hooks/useTutorSearch';
+import type { Tutor } from '@/services/api/types';
 
 type SearchScreenNavigationProp = StackNavigationProp<SearchStackParamList, 'SearchMain'>;
 
@@ -29,79 +23,25 @@ type Props = {
 
 export default function SearchScreen({ navigation }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
-  const [allTutors, setAllTutors] = useState<Tutor[]>([]);
-  const [tutors, setTutors] = useState<Tutor[]>([]);
-  const [searchText, setSearchText] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [activeFilterTab, setActiveFilterTab] = useState<'subject' | 'rate' | 'other'>('subject');
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
-  const [filters, setFilters] = useState<FilterOptions>({
+  const { user: authUser } = useAuth();
+  const { tutors, isLoading, searchText, setSearchText, filters, setFilters } = useTutorSearch({
     subject: '',
     minRate: 0,
     maxRate: 5000,
     onlineOnly: false,
   });
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeFilterTab, setActiveFilterTab] = useState<'subject' | 'rate' | 'other'>('subject');
 
   const subjects = ['数学', '英語', '物理', '化学', '生物', '国語', '現代文'];
 
   useFocusEffect(
     React.useCallback(() => {
-      let active = true;
-      const api = getApiClient();
-      setIsLoading(true);
-      Promise.all([
-        api.student.searchTutors(undefined, 1, 100),
-        api.student.getProfile('student-1'),
-      ])
-        .then(([tutorsResp, studentResp]) => {
-          if (!active) return;
-          const tutorsData = tutorsResp?.success ? tutorsResp.data : [];
-          setAllTutors(tutorsData);
-          setTutors(tutorsData);
-          if (studentResp?.success) {
-            setCurrentStudent(studentResp.data);
-          }
-        })
-        .finally(() => active && setIsLoading(false));
-      return () => {
-        active = false;
-      };
+      return undefined;
     }, []),
   );
 
-  // フィルタリング処理
-  useEffect(() => {
-    let filtered = allTutors;
-
-    // テキスト検索
-    if (searchText) {
-      filtered = filtered.filter(
-        (tutor) =>
-          tutor.name.includes(searchText) ||
-          tutor.school?.includes(searchText) ||
-          false ||
-          tutor.subjects_taught.some((subject) => subject.includes(searchText)),
-      );
-    }
-
-    // 科目フィルタ
-    if (filters.subject) {
-      filtered = filtered.filter((tutor) => tutor.subjects_taught.includes(filters.subject));
-    }
-
-    // 料金フィルタ
-    filtered = filtered.filter(
-      (tutor) => tutor.hourly_rate >= filters.minRate && tutor.hourly_rate <= filters.maxRate,
-    );
-
-    // オンライン可能フィルタ
-    if (filters.onlineOnly) {
-      filtered = filtered.filter((tutor) => tutor.online_available);
-    }
-
-    setTutors(filtered);
-  }, [searchText, filters, allTutors]);
+  // フィルタリング処理は useTutorSearch 内へ集約済み
 
   const handleTutorPress = (tutorId: string) => {
     navigation.navigate('TutorDetail', { tutorId });
@@ -122,8 +62,8 @@ export default function SearchScreen({ navigation }: Props) {
       isFavorite={isFavorite(item.id)}
       onPress={() => handleTutorPress(item.id)}
       onFavoritePress={() => {
-        if (currentStudent) {
-          toggleFavorite(item.id, currentStudent.id);
+        if (authUser?.id) {
+          toggleFavorite(item.id, authUser.id);
         }
       }}
       onDetailPress={() => handleTutorPress(item.id)}

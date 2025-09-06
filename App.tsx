@@ -9,63 +9,8 @@ import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { FavoritesProvider } from './src/contexts/FavoritesContext';
 import { UserProvider } from './src/contexts/UserContext';
 import TabNavigator from './src/navigation/TabNavigator';
-import PhoneVerificationScreen from './src/screens/auth/PhoneVerificationScreen';
-import ProfileSetupScreen, { ProfileData } from './src/screens/auth/ProfileSetupScreen';
-import RoleSelectionScreen from './src/screens/auth/RoleSelectionScreen';
 
-type AuthStep = 'role' | 'phone' | 'profile' | 'completed';
-
-function AuthFlow() {
-  const [authStep, setAuthStep] = useState<AuthStep>('role');
-  const [selectedRole, setSelectedRole] = useState<'student' | 'tutor'>('student');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const { signIn } = useAuth();
-
-  const handleRoleSelect = (role: 'student' | 'tutor') => {
-    setSelectedRole(role);
-    setAuthStep('phone');
-  };
-
-  const handleVerificationComplete = (phone: string, code: string) => {
-    setPhoneNumber(phone);
-    setAuthStep('profile');
-  };
-
-  const handleProfileComplete = async (profileData: ProfileData) => {
-    // モック：ユーザー登録処理
-    const userData = {
-      id: Date.now().toString(),
-      role: selectedRole,
-      phoneNumber,
-      ...profileData,
-    };
-
-    await signIn(userData);
-    setAuthStep('completed');
-  };
-
-  switch (authStep) {
-    case 'role':
-      return <RoleSelectionScreen onRoleSelect={handleRoleSelect} />;
-    case 'phone':
-      return (
-        <PhoneVerificationScreen
-          role={selectedRole}
-          onVerificationComplete={handleVerificationComplete}
-        />
-      );
-    case 'profile':
-      return (
-        <ProfileSetupScreen
-          role={selectedRole}
-          phoneNumber={phoneNumber}
-          onProfileComplete={handleProfileComplete}
-        />
-      );
-    default:
-      return <TabNavigator />;
-  }
-}
+import AuthFlow from '@/navigation/auth/AuthStackNavigator';
 
 function AppContent() {
   const { user } = useAuth();

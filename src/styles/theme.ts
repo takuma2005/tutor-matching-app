@@ -99,17 +99,27 @@ export type Typography = {
   weights: { normal: string; medium: string; semibold: string; bold: string };
 };
 
+// 単一ソースのフォントサイズ定義
+const baseFontSizes: FontSizes = {
+  xs: 12,
+  sm: 14,
+  md: 16,
+  lg: 18,
+  xl: 20,
+  xxl: 24,
+  xxxl: 28,
+  xxxxl: 32,
+  // Aliases（アプリ内で参照されているため残す）
+  h1: 28,
+  h2: 24,
+  h3: 20,
+  h4: 18,
+  body: 16,
+  caption: 12,
+};
+
 export const typography: Typography = {
-  fontSizes: {
-    xs: 12,
-    sm: 14,
-    md: 16,
-    lg: 18,
-    xl: 20,
-    xxl: 24,
-    xxxl: 28,
-    xxxxl: 32,
-  },
+  fontSizes: baseFontSizes,
   fontWeights: {
     normal: '400',
     medium: '500',
@@ -121,23 +131,8 @@ export const typography: Typography = {
     normal: 1.5,
     relaxed: 1.75,
   },
-  sizes: {
-    xs: 12,
-    sm: 14,
-    md: 16,
-    lg: 18,
-    xl: 20,
-    xxl: 24,
-    xxxl: 28,
-    xxxxl: 32,
-    // Aliases
-    h1: 28,
-    h2: 24,
-    h3: 20,
-    h4: 18,
-    body: 16,
-    caption: 12,
-  },
+  // sizes は fontSizes のエイリアス（同一参照）
+  sizes: baseFontSizes,
   weights: {
     normal: '400',
     medium: '500',

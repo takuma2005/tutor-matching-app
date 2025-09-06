@@ -175,6 +175,19 @@ export const mockTutors: Tutor[] = [
   },
 ];
 
+// 日時生成ヘルパー（現在時刻基準で相対的に生成）
+const toIso = (d: Date) => d.toISOString();
+const atTime = (date: Date, hh: number, mm: number) => {
+  const d = new Date(date);
+  d.setHours(hh, mm, 0, 0);
+  return d;
+};
+const addDays = (date: Date, days: number) => {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
 // モックレッスンデータ
 export const mockLessons: Lesson[] = [
   {
@@ -183,14 +196,14 @@ export const mockLessons: Lesson[] = [
     student_id: 'student-1',
     subject: '数学',
     status: 'completed',
-    scheduled_at: '2024-01-15T19:00:00Z',
+    scheduled_at: toIso(addDays(atTime(new Date(), 0, 0), -230)),
     duration_minutes: 60,
     coin_cost: 100,
     lesson_notes: '二次方程式の解き方を学習しました',
     tutor_feedback: 'よく理解できていました。次回は応用問題に挑戦しましょう',
     student_rating: 5,
-    created_at: '2024-01-10T14:00:00Z',
-    updated_at: '2024-01-15T20:00:00Z',
+    created_at: toIso(addDays(new Date(), -235)),
+    updated_at: toIso(addDays(new Date(), -230)),
   },
   {
     id: 'lesson-2',
@@ -198,24 +211,24 @@ export const mockLessons: Lesson[] = [
     student_id: 'student-1',
     subject: '英語',
     status: 'scheduled',
-    scheduled_at: '2024-01-25T10:00:00Z',
+    scheduled_at: toIso(addDays(atTime(new Date(), 10, 0), 10)),
     duration_minutes: 90,
     coin_cost: 150,
-    created_at: '2024-01-20T09:00:00Z',
-    updated_at: '2024-01-20T09:00:00Z',
+    created_at: toIso(addDays(new Date(), -1)),
+    updated_at: toIso(addDays(new Date(), -1)),
   },
-  // 追加: 未来のモック授業（ホームの「授業の予定」に反映されます）
+  // 未来のモック授業（ホームの「授業の予定」に反映）
   {
     id: 'lesson-3',
     tutor_id: '1',
     student_id: 'student-1',
     subject: '数学',
     status: 'scheduled',
-    scheduled_at: '2025-09-08T10:00:00Z',
+    scheduled_at: toIso(addDays(atTime(new Date(), 10, 0), 2)),
     duration_minutes: 60,
     coin_cost: 120,
-    created_at: '2025-09-06T09:00:00Z',
-    updated_at: '2025-09-06T09:00:00Z',
+    created_at: toIso(new Date()),
+    updated_at: toIso(new Date()),
   },
   {
     id: 'lesson-4',
@@ -223,11 +236,11 @@ export const mockLessons: Lesson[] = [
     student_id: 'student-1',
     subject: '英語',
     status: 'scheduled',
-    scheduled_at: '2025-09-12T18:30:00Z',
+    scheduled_at: toIso(addDays(atTime(new Date(), 18, 30), 6)),
     duration_minutes: 90,
     coin_cost: 180,
-    created_at: '2025-09-06T09:00:00Z',
-    updated_at: '2025-09-06T09:00:00Z',
+    created_at: toIso(new Date()),
+    updated_at: toIso(new Date()),
   },
 ];
 

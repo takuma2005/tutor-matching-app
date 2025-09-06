@@ -6,9 +6,14 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
+// AsyncStorage mock
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
 
 jest.mock('@expo/vector-icons', () => ({ MaterialIcons: 'MaterialIcons' }));
 jest.mock('@react-native-community/datetimepicker', () => 'DateTimePicker');
+jest.mock('expo-linear-gradient', () => ({ LinearGradient: 'LinearGradient' }));
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
@@ -19,6 +24,13 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({
     params: {},
   }),
+  // Run the focus effect immediately in tests
+  useFocusEffect: (effect: any) => {
+    if (typeof effect === 'function') {
+      const cleanup = effect();
+      if (typeof cleanup === 'function') cleanup();
+    }
+  },
 }));
 
 jest.mock('@react-navigation/stack', () => ({

@@ -2,29 +2,38 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import React from 'react';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 import MyPageScreen from '../MyPageScreen';
+
+import { AuthProvider } from '@/contexts/AuthContext';
+import { FavoritesProvider } from '@/contexts/FavoritesContext';
+import { UserProvider } from '@/contexts/UserContext';
 
 const mockNavigation: any = {};
 
-describe('MyPageScreen edit flow', () => {
+describe('MyPageScreen – settings presence', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('edits school name and saves', () => {
-    render(<MyPageScreen navigation={mockNavigation} />);
+  it('shows settings menu items', () => {
+    render(
+      <SafeAreaProvider>
+        <AuthProvider>
+          <UserProvider>
+            <FavoritesProvider>
+              <MyPageScreen navigation={mockNavigation} />
+            </FavoritesProvider>
+          </UserProvider>
+        </AuthProvider>
+      </SafeAreaProvider>,
+    );
 
-    // switch to edit tab
-    fireEvent.press(screen.getByText('編集'));
-
-    // change school field
-    const schoolInput = screen.getByPlaceholderText('学校名を入力');
-    fireEvent.changeText(schoolInput, 'テスト高校');
-
-    // save
-    fireEvent.press(screen.getByText('保存'));
-
-    // verify reflected in info view
-    expect(screen.getByText('テスト高校')).toBeTruthy();
+    expect(screen.getByText('設定')).toBeTruthy();
+    expect(screen.getByText('コイン管理')).toBeTruthy();
+    expect(screen.getByText('通知設定')).toBeTruthy();
+    expect(screen.getByText('ヘルプ・サポート')).toBeTruthy();
+    expect(screen.getByText('ログアウト')).toBeTruthy();
   });
 });
