@@ -183,25 +183,17 @@ export interface ChatRoom {
 }
 
 export interface ChatService {
-  getChatRooms(studentId: string): Promise<ApiResponse<(ChatRoom & { lastMessage?: Message; messageCount?: number })[]>>;
+  getChatRooms(
+    studentId: string,
+  ): Promise<ApiResponse<(ChatRoom & { lastMessage?: Message; messageCount?: number })[]>>;
   getMessages(
     chatRoomId: string,
     page?: number,
     limit?: number,
   ): Promise<PaginatedResponse<Message>>;
-  sendMessage(
-    chatRoomId: string,
-    senderId: string,
-    text: string,
-  ): Promise<ApiResponse<Message>>;
-  updateMessageStatus(
-    messageId: string,
-    status: MessageStatus,
-  ): Promise<ApiResponse<Message>>;
-  createChatRoom(
-    tutorId: string,
-    studentId: string,
-  ): Promise<ApiResponse<ChatRoom>>;
+  sendMessage(chatRoomId: string, senderId: string, text: string): Promise<ApiResponse<Message>>;
+  updateMessageStatus(messageId: string, status: MessageStatus): Promise<ApiResponse<Message>>;
+  createChatRoom(tutorId: string, studentId: string): Promise<ApiResponse<ChatRoom>>;
 }
 
 // リアルタイム通知型

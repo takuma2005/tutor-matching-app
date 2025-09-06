@@ -22,9 +22,8 @@ export class MockCoinGateway implements CoinGateway {
     description?: string,
   ): Promise<void> {
     // Map to unified transaction types: purchase | spend | refund
-    const txType: CoinTransaction['type'] = amount >= 0
-      ? (reason === 'purchase' ? 'purchase' : 'refund')
-      : 'spend';
+    const txType: CoinTransaction['type'] =
+      amount >= 0 ? (reason === 'purchase' ? 'purchase' : 'refund') : 'spend';
 
     await mockCoinService.addMockTransaction({
       user_id: userId,

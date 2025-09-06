@@ -177,7 +177,6 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
                 <MaterialIcons name="person" size={40} color={colors.gray400} />
               </View>
             )}
-
           </View>
 
           <View style={styles.profileInfo}>

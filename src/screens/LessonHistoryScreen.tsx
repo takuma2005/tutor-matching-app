@@ -1,13 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Image,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -48,18 +41,18 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
       try {
         const [lessonsResp, tutorsResp] = await Promise.all([
           mockApiClient.student.getLessons(),
-          mockApiClient.student.searchTutors()
+          mockApiClient.student.searchTutors(),
         ]);
-        
+
         if (tutorsResp.success) {
-          const tutorData = tutorsResp.data.find(t => t.id === tutorId);
+          const tutorData = tutorsResp.data.find((t) => t.id === tutorId);
           setTutor(tutorData || null);
         }
-        
+
         if (lessonsResp.success) {
-          const tutorLessons = lessonsResp.data.filter(lesson => lesson.tutor_id === tutorId);
+          const tutorLessons = lessonsResp.data.filter((lesson) => lesson.tutor_id === tutorId);
           // APIデータをLessonタイプに変換
-          const mappedLessons: Lesson[] = tutorLessons.map(l => ({
+          const mappedLessons: Lesson[] = tutorLessons.map((l) => ({
             id: l.id,
             tutor_id: l.tutor_id,
             student_id: l.student_id,
@@ -81,7 +74,7 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
   }, [tutorId]);
 
   const now = Date.now();
-  
+
   const upcomingLessons = React.useMemo(() => {
     return lessons.filter((lesson) => {
       const t = new Date(lesson.scheduled_at).getTime();
@@ -102,21 +95,31 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return colors.secondary;
-      case 'scheduled': return colors.primary;
-      case 'completed': return colors.primary;
-      case 'cancelled': return colors.error;
-      default: return colors.gray500;
+      case 'pending':
+        return colors.secondary;
+      case 'scheduled':
+        return colors.primary;
+      case 'completed':
+        return colors.primary;
+      case 'cancelled':
+        return colors.error;
+      default:
+        return colors.gray500;
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'pending': return '承認待ち';
-      case 'scheduled': return '予約確定';
-      case 'completed': return '完了';
-      case 'cancelled': return 'キャンセル';
-      default: return status;
+      case 'pending':
+        return '承認待ち';
+      case 'scheduled':
+        return '予約確定';
+      case 'completed':
+        return '完了';
+      case 'cancelled':
+        return 'キャンセル';
+      default:
+        return status;
     }
   };
 
@@ -182,10 +185,7 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
@@ -229,9 +229,7 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
               color={colors.gray300}
             />
             <Text style={styles.emptyTitle}>
-              {selectedTab === 'upcoming'
-                ? '今後の授業はありません'
-                : '過去の授業はありません'}
+              {selectedTab === 'upcoming' ? '今後の授業はありません' : '過去の授業はありません'}
             </Text>
             <Text style={styles.emptySubtitle}>
               {selectedTab === 'upcoming'

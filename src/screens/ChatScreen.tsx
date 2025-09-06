@@ -2,7 +2,15 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  Image,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
@@ -37,13 +45,18 @@ export default function ChatScreen({ navigation }: Props) {
 
   const api = getApiClient();
 
-  const loadChatRooms = useCallback(async (studentId: string) => {
-    const resp = await api.chat.getChatRooms(studentId);
-    if (resp.success) {
-      const rooms = resp.data.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-      setChatRooms(rooms);
-    }
-  }, [api.chat]);
+  const loadChatRooms = useCallback(
+    async (studentId: string) => {
+      const resp = await api.chat.getChatRooms(studentId);
+      if (resp.success) {
+        const rooms = resp.data.sort(
+          (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        );
+        setChatRooms(rooms);
+      }
+    },
+    [api.chat],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -67,7 +80,7 @@ export default function ChatScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       if (currentStudent) loadChatRooms(currentStudent.id);
-    }, [currentStudent, loadChatRooms])
+    }, [currentStudent, loadChatRooms]),
   );
 
   const handleRefresh = useCallback(() => {
@@ -155,8 +168,15 @@ export default function ChatScreen({ navigation }: Props) {
           </View>
 
           <View style={styles.messageRow}>
-            <Text style={[styles.lastMessage, hasNewMessage && styles.lastMessageUnread]} numberOfLines={2}>
-              {last ? (last.text.length <= 60 ? last.text : last.text.slice(0, 60) + '...') : 'メッセージなし'}
+            <Text
+              style={[styles.lastMessage, hasNewMessage && styles.lastMessageUnread]}
+              numberOfLines={2}
+            >
+              {last
+                ? last.text.length <= 60
+                  ? last.text
+                  : last.text.slice(0, 60) + '...'
+                : 'メッセージなし'}
             </Text>
             {hasNewMessage && <View style={styles.newMessageDot} />}
           </View>

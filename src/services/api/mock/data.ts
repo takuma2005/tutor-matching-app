@@ -38,8 +38,10 @@ export const mockStudents: Student[] = [
     school: '都立青山高等学校',
     phone: '090-1234-5678',
     bio: 'こんにちは！田中花子です。数学と英語の勉強をがんばっています。特に数学の関数が苦手なので、分かりやすく教えてくれる先生を探しています。よろしくお願いします！',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&h=120&fit=crop&crop=faces&auto=format',
-    avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&h=120&fit=crop&crop=faces&auto=format', // for compatibility
+    avatar:
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&h=120&fit=crop&crop=faces&auto=format',
+    avatar_url:
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&h=120&fit=crop&crop=faces&auto=format', // for compatibility
     created_at: '2024-01-15T09:00:00Z',
     updated_at: '2024-01-20T15:30:00Z',
   },
@@ -57,8 +59,10 @@ export const mockStudents: Student[] = [
     school: '私立桜丘高等学校',
     phone: '090-2345-6789',
     bio: '医学部を目指している高校3年生です。特に化学と生物の理解を深めたいと思っています。一緒にがんばりましょう！',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces&auto=format',
-    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces&auto=format',
+    avatar:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces&auto=format',
+    avatar_url:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces&auto=format',
     created_at: '2024-01-10T10:00:00Z',
     updated_at: '2024-01-22T14:30:00Z',
   },

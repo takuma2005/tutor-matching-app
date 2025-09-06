@@ -74,7 +74,9 @@ export default function LessonScreen() {
       const t = lesson.scheduledAt.getTime();
       const isFuture = t >= now;
       const isUpcomingStatus =
-        lesson.status === 'pending' || lesson.status === 'confirmed' || lesson.status === 'in-progress';
+        lesson.status === 'pending' ||
+        lesson.status === 'confirmed' ||
+        lesson.status === 'in-progress';
       return isUpcomingStatus && (isFuture || lesson.status === 'in-progress');
     });
   }, [lessons, now]);
@@ -196,24 +198,20 @@ export default function LessonScreen() {
             <TouchableOpacity
               style={[styles.actionButton, styles.completeButton]}
               onPress={() => {
-                Alert.alert(
-                  '完了確認',
-                  'この授業を完了し、送金を確定しますか？',
-                  [
-                    { text: '戻る', style: 'cancel' },
-                    {
-                      text: '完了にする',
-                      style: 'default',
-                      onPress: () => {
-                        // 課金確定（モック）: 既に予約時に減算済みのため、状態のみ更新
-                        setLessons((prev) =>
-                          prev.map((l) => (l.id === item.id ? { ...l, status: 'completed' } : l)),
-                        );
-                        Alert.alert('完了しました', '授業が完了し、送金が確定しました。');
-                      },
+                Alert.alert('完了確認', 'この授業を完了し、送金を確定しますか？', [
+                  { text: '戻る', style: 'cancel' },
+                  {
+                    text: '完了にする',
+                    style: 'default',
+                    onPress: () => {
+                      // 課金確定（モック）: 既に予約時に減算済みのため、状態のみ更新
+                      setLessons((prev) =>
+                        prev.map((l) => (l.id === item.id ? { ...l, status: 'completed' } : l)),
+                      );
+                      Alert.alert('完了しました', '授業が完了し、送金が確定しました。');
                     },
-                  ],
-                );
+                  },
+                ]);
               }}
             >
               <Text style={styles.completeButtonText}>完了にする</Text>
@@ -224,7 +222,10 @@ export default function LessonScreen() {
                 if (!user) return;
                 const hoursUntil = (item.scheduledAt.getTime() - Date.now()) / (1000 * 60 * 60);
                 if (hoursUntil < 12) {
-                  Alert.alert('キャンセル不可', '開始12時間前を過ぎているため、キャンセルできません。');
+                  Alert.alert(
+                    'キャンセル不可',
+                    '開始12時間前を過ぎているため、キャンセルできません。',
+                  );
                   return;
                 }
                 Alert.alert(

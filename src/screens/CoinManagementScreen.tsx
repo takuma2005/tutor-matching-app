@@ -215,8 +215,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
           <View
             style={{
-              backgroundColor:
-                item.type === 'spend' ? colors.error + '15' : colors.success + '15',
+              backgroundColor: item.type === 'spend' ? colors.error + '15' : colors.success + '15',
               paddingHorizontal: 8,
               paddingVertical: 2,
               borderRadius: 999,

@@ -121,7 +121,8 @@ export const mockChatService: ChatService = {
   async updateMessageStatus(messageId: string, status: MessageStatus) {
     await delay(MOCK_DELAY.SHORT);
     const idx = messages.findIndex((m) => m.id === messageId);
-    if (idx === -1) return { success: false, error: 'MessageNotFound', data: undefined as any } as const;
+    if (idx === -1)
+      return { success: false, error: 'MessageNotFound', data: undefined as any } as const;
     messages[idx] = { ...messages[idx], status };
     return { success: true, data: messages[idx] } as const;
   },

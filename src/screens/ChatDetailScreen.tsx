@@ -24,7 +24,6 @@ import type { Tutor, Student, Message as ApiMessage, MessageStatus } from '@/ser
 // API の Message 型を利用するためローカル定義は削除
 type Props = StackScreenProps<ChatStackParamList, 'ChatDetail'>;
 
-
 export default function ChatDetailScreen({ route, navigation }: Props) {
   const { tutorId, chatRoomId } = route.params;
   const [messages, setMessages] = useState<ApiMessage[]>([]);
@@ -84,7 +83,6 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
     }
   }, [isTyping, typingAnimValue]);
 
-
   const handleSendMessage = useCallback(async () => {
     if (inputText.trim() === '' || isLoading || !currentStudent) return;
     const messageText = inputText.trim();
@@ -117,7 +115,9 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
         const last = sendResp.success ? sendResp.data : null;
         if (last) {
           await api.chat.updateMessageStatus(last.id, 'delivered');
-          setMessages((prev) => prev.map((m) => (m.id === last.id ? { ...m, status: 'delivered' } : m)));
+          setMessages((prev) =>
+            prev.map((m) => (m.id === last.id ? { ...m, status: 'delivered' } : m)),
+          );
         }
         if (Math.random() < 0.3 && messageText.includes('？')) {
           setIsTyping(true);
@@ -233,7 +233,9 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
                 {formatMessageTime(item.timestamp)}
               </Text>
             )}
-            {isOwnMessage && <View style={styles.messageStatus}>{getMessageStatusIcon(item.status)}</View>}
+            {isOwnMessage && (
+              <View style={styles.messageStatus}>{getMessageStatusIcon(item.status)}</View>
+            )}
           </View>
         </View>
       </View>
@@ -249,13 +251,17 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
           <Animated.View
             style={[
               styles.typingDot,
-              { opacity: typingAnimValue.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) },
+              {
+                opacity: typingAnimValue.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+              },
             ]}
           />
           <Animated.View
             style={[
               styles.typingDot,
-              { opacity: typingAnimValue.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) },
+              {
+                opacity: typingAnimValue.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }),
+              },
             ]}
           />
         </View>
@@ -298,8 +304,8 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        <TouchableOpacity 
-          style={styles.headerIconButton} 
+        <TouchableOpacity
+          style={styles.headerIconButton}
           onPress={() => navigation.navigate('LessonHistory', { tutorId })}
         >
           <MaterialIcons name="assignment" size={20} color={colors.primary} />
@@ -321,7 +327,8 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => {
-            if (!isLoading) setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+            if (!isLoading)
+              setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
           }}
         />
 
@@ -341,7 +348,7 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
               <Text style={styles.statusBadgeText}>承認待ち</Text>
             </View>
           </View>
-          
+
           <View style={styles.cardContent}>
             <View style={styles.cardInfoRow}>
               <MaterialIcons name="event" size={16} color={colors.gray500} />
@@ -360,7 +367,11 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
 
         {/* 下部CTA：授業を申請する */}
         <View style={styles.ctaContainer}>
-          <TouchableOpacity style={styles.ctaButton} onPress={handleLessonRequest} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            onPress={handleLessonRequest}
+            activeOpacity={0.8}
+          >
             <MaterialIcons name="add" size={20} color={colors.white} style={styles.ctaIcon} />
             <Text style={styles.ctaButtonText}>新しい授業を申請</Text>
           </TouchableOpacity>
@@ -379,10 +390,7 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
             <View style={styles.inputWrapper}>
               <TextInput
                 ref={inputRef}
-                style={[
-                  styles.textInput,
-                  inputText.length > 200 && styles.textInputExpanded
-                ]}
+                style={[styles.textInput, inputText.length > 200 && styles.textInputExpanded]}
                 placeholder="メッセージを入力..."
                 placeholderTextColor={colors.gray400}
                 value={inputText}
@@ -397,7 +405,10 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
               />
             </View>
             <TouchableOpacity
-              style={[styles.sendButton, (inputText.trim() === '' || isLoading) && styles.sendButtonDisabled]}
+              style={[
+                styles.sendButton,
+                (inputText.trim() === '' || isLoading) && styles.sendButtonDisabled,
+              ]}
               onPress={handleSendMessage}
               disabled={inputText.trim() === '' || isLoading}
               activeOpacity={0.7}
