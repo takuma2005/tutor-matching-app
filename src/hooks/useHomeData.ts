@@ -24,7 +24,7 @@ export function useHomeData() {
         setRecommendedTutors(recommended);
 
         const createdTime = (t: Tutor) => {
-          const c = (t as any).created_at || (t as any).updated_at || 0;
+          const c = t.created_at || t.updated_at || '';
           return new Date(c).getTime();
         };
         const newest = [...tutors].sort((a, b) => createdTime(b) - createdTime(a)).slice(0, 3);

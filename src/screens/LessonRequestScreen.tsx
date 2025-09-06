@@ -16,10 +16,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
-import { useUser } from '@/contexts/UserContext';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
-import type { Tutor, Student } from '@/services/api/types';
+import type { Tutor, Student, Lesson } from '@/services/api/types';
 
 type Props = {
   route: {
@@ -43,7 +42,6 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
   const { tutorId } = route.params;
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
-  const { updateCoins } = useUser();
 
   React.useEffect(() => {
     const api = getApiClient();
@@ -183,7 +181,7 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
             try {
               setIsLoading(true);
               const api = getApiClient();
-              const payload = {
+              const payload: Omit<Lesson, 'id' | 'status' | 'created_at' | 'updated_at'> = {
                 tutor_id: tutor.id,
                 student_id: currentStudent?.id ?? 'student-1',
                 subject: request.subject,
@@ -191,9 +189,9 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
                 duration_minutes: request.duration,
                 coin_cost: request.totalCost,
                 lesson_notes: request.notes,
-              } as const;
+              };
 
-              const res = await api.student.bookLesson(tutor.id, payload as any);
+              const res = await api.student.bookLesson(tutor.id, payload);
               if (res.success) {
                 // Sync balance from backend to avoid drift
                 await CoinManager.syncBalance(currentStudent?.id ?? 'student-1');

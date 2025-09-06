@@ -30,7 +30,6 @@ export class MockCoinGateway implements CoinGateway {
       amount,
       type: txType,
       description: description ?? this.defaultDescription(amount, reason),
-      stripe_payment_intent_id: undefined as any,
     });
   }
 

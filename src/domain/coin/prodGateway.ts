@@ -10,13 +10,13 @@ export class ProdCoinGateway implements CoinGateway {
     const api = getApiClient();
     const res = await api.coin.getBalance(userId);
     if (res.success) return res.data.balance;
-    throw new Error(res.error ?? 'Failed to fetch balance');
+    throw new Error('Failed to fetch balance');
   }
 
   async purchase(userId: string, amount: number, paymentMethodId: string): Promise<void> {
     const api = getApiClient();
     const res = await api.coin.purchaseCoins(userId, amount, paymentMethodId);
-    if (!res.success) throw new Error(res.error ?? 'Failed to purchase coins');
+    if (!res.success) throw new Error('Failed to purchase coins');
   }
 
   async applyDelta(
@@ -33,7 +33,7 @@ export class ProdCoinGateway implements CoinGateway {
   async getHistory(userId: string, page = 1, limit = 20): Promise<CoinTransaction[]> {
     const api = getApiClient();
     const res = await api.coin.getTransactionHistory(userId, page, limit);
-    if (!res.success) throw new Error(res.error ?? 'Failed to fetch transactions');
+    if (!res.success) throw new Error('Failed to fetch transactions');
     return res.data;
   }
 }

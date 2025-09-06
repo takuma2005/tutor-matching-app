@@ -56,7 +56,7 @@ function deserializeFavorites(json: string | null): FavoriteTutor[] {
       addedAt: string;
     }[];
     return raw.map((r) => ({ ...r, addedAt: new Date(r.addedAt) }));
-  } catch (e) {
+  } catch {
     return [];
   }
 }
@@ -69,7 +69,7 @@ async function loadFavoritesFromStorage(): Promise<FavoriteTutor[]> {
 async function saveFavoritesToStorage(items: FavoriteTutor[]): Promise<void> {
   try {
     await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, serializeFavorites(items));
-  } catch (e) {
+  } catch {
     // noop（失敗してもメモリ上では維持）
   }
 }

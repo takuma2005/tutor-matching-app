@@ -1,34 +1,22 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { RouteProp } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp } from '@react-navigation/native';
+
 import { ChatStackParamList } from '../navigation/ChatStackNavigator';
 import { mockApiClient } from '../services/api/mock';
 import { Lesson, Tutor } from '../services/api/types';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
-type LessonHistoryScreenNavigationProp = NativeStackNavigationProp<
-  ChatStackParamList,
-  'LessonHistory'
->;
+type LessonHistoryScreenNavigationProp = StackNavigationProp<ChatStackParamList, 'LessonHistory'>;
 type LessonHistoryScreenRouteProp = RouteProp<ChatStackParamList, 'LessonHistory'>;
 
 interface Props {
   navigation: LessonHistoryScreenNavigationProp;
   route: LessonHistoryScreenRouteProp;
 }
-
-const formatDate = (date: Date) => {
-  const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const weekday = weekdays[date.getDay()];
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${month}月${day}日(${weekday}) ${hours}:${minutes}`;
-};
 
 const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
   const { tutorId } = route.params;
@@ -62,6 +50,8 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
             status: l.status,
             coin_cost: l.coin_cost,
             lesson_notes: l.lesson_notes,
+            created_at: l.created_at,
+            updated_at: l.updated_at,
           }));
           setLessons(mappedLessons);
         }
@@ -79,7 +69,7 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
     return lessons.filter((lesson) => {
       const t = new Date(lesson.scheduled_at).getTime();
       const isFuture = t >= now;
-      const isUpcomingStatus = lesson.status === 'pending' || lesson.status === 'scheduled';
+      const isUpcomingStatus = lesson.status === 'scheduled';
       return isUpcomingStatus && isFuture;
     });
   }, [lessons, now]);
@@ -189,7 +179,7 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
           <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>{tutor?.name || '謟師'}さんとの授業履歴</Text>
+          <Text style={styles.title}>{tutor?.name || '講師'}さんとの授業履歴</Text>
           <Text style={styles.subtitle}>申請済み・完了済みの授業</Text>
         </View>
       </View>

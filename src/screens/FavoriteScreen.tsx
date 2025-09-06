@@ -29,7 +29,7 @@ type Props = {
 export default function FavoriteScreen({ navigation }: Props) {
   const { favorites, addFavorite, removeFavorite, isFavorite } = useFavorites();
   const { user: authUser, student } = useAuth();
-  const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [, setTutors] = useState<Tutor[]>([]);
   const [favoriteTutors, setFavoriteTutors] = useState<Tutor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

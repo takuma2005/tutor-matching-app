@@ -1,9 +1,9 @@
 // モックサービスの統合インデックス
 
 import { mockAuthService } from './authService';
+import { mockChatService } from './chatService';
 import { mockCoinService } from './coinService';
 import { mockStudentService } from './studentService';
-import { mockChatService } from './chatService';
 
 // すべてのモックサービスを統合したAPIクライアント
 export const mockApiClient = {
@@ -41,7 +41,7 @@ const notImplemented = (name: string) => {
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
     console.warn(`API stub hit: ${name} is not implemented`);
   }
-  return { success: false as const, error: 'NotImplemented', data: null as any };
+  return { success: false as const, error: 'NotImplemented', data: null as unknown as never };
 };
 
 const prodApiClient = {

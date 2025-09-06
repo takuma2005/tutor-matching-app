@@ -9,7 +9,6 @@ import Badge from '../components/common/Badge';
 import BottomSheet from '../components/common/BottomSheet';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
-import { useUser } from '@/contexts/UserContext';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { CoinTransaction } from '@/services/api/types';
@@ -38,7 +37,6 @@ export default function CoinManagementScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [balance, setBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
-  const { updateCoins } = useUser();
 
   React.useEffect(() => {
     const api = getApiClient();
@@ -91,8 +89,9 @@ export default function CoinManagementScreen({ navigation }: Props) {
                 '購入完了',
                 `${coinPackage.coins}${coinPackage.bonus ? ` + ${coinPackage.bonus}` : ''}コインを購入しました！`,
               );
-            } catch (e: any) {
-              Alert.alert('エラー', e?.message ?? '購入に失敗しました');
+            } catch (e: unknown) {
+              const msg = e instanceof Error ? e.message : '購入に失敗しました';
+              Alert.alert('エラー', msg);
             } finally {
               setIsLoading(false);
             }

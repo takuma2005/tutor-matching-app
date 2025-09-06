@@ -1,9 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
+
+type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
 
 type NotificationType =
   | 'lesson_request'
@@ -157,7 +160,7 @@ export default function NotificationScreen() {
             ]}
           >
             <MaterialIcons
-              name={getNotificationIcon(item.type) as any}
+              name={getNotificationIcon(item.type) as MaterialIconName}
               size={20}
               color={getNotificationColor(item.type)}
             />

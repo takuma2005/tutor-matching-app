@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 
 type TutorCardProps = {
   id: string;

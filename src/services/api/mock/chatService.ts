@@ -3,7 +3,7 @@ import type { ChatService, ChatRoom, Message, MessageStatus } from '@/services/a
 const MOCK_DELAY = { SHORT: 200, MEDIUM: 500, LONG: 1000 } as const;
 
 // メモリ内データストア（開発用）
-let chatRooms: ChatRoom[] = [
+const chatRooms: ChatRoom[] = [
   {
     id: 'room_1',
     tutorId: '1', // 既存mockTutorに合わせる
@@ -27,7 +27,7 @@ let chatRooms: ChatRoom[] = [
   },
 ];
 
-let messages: Message[] = [
+const messages: Message[] = [
   {
     id: 'msg_1',
     chatRoomId: 'room_1',
@@ -122,13 +122,17 @@ export const mockChatService: ChatService = {
     await delay(MOCK_DELAY.SHORT);
     const idx = messages.findIndex((m) => m.id === messageId);
     if (idx === -1)
-      return { success: false, error: 'MessageNotFound', data: undefined as any } as const;
+      return {
+        success: false,
+        error: 'MessageNotFound',
+        data: undefined as unknown as Message,
+      } as const;
     messages[idx] = { ...messages[idx], status };
     return { success: true, data: messages[idx] } as const;
   },
 
   async createChatRoom(tutorId: string, studentId: string) {
-    await delay(API_CONFIG.MOCK_DELAY.SHORT);
+    await delay(MOCK_DELAY.SHORT);
     const existing = chatRooms.find((r) => r.tutorId === tutorId && r.studentId === studentId);
     if (existing) return { success: true, data: existing } as const;
 

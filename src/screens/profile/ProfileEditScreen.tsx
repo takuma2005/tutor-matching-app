@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useUser, type UserProfile } from '../../contexts/UserContext';
+import { useUser } from '../../contexts/UserContext';
 import type { MyPageStackParamList } from '../../navigation/MyPageStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 

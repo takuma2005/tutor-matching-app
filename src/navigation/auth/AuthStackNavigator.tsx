@@ -26,12 +26,13 @@ export default function AuthFlow() {
 
   const handleProfileComplete = async (profileData: ProfileData) => {
     // モック：ユーザー登録処理
-    const userData = {
+    const userData: Parameters<typeof signIn>[0] = {
       id: Date.now().toString(),
       role: selectedRole,
       phoneNumber,
-      ...profileData,
-    } as any;
+      name: profileData.name,
+      age: profileData.age,
+    };
 
     await signIn(userData);
     setAuthStep('completed');

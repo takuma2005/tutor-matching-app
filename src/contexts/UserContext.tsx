@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Alert } from 'react-native';
 
 import { getApiClient } from '../services/api/mock';
-import type { Student } from '../services/api/types';
 
 import { useAuth } from '@/contexts/AuthContext';
 import coinEvents from '@/domain/coin/coinEvents';
@@ -162,7 +160,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     const unsub = coinEvents.onBalanceChanged((balance) => {
       setUser((prev) => (prev ? { ...prev, coins: balance } : prev));
     });
-    return unsub;
+    return () => {
+      unsub();
+    };
   }, []);
 
   const contextValue: UserContextType = {

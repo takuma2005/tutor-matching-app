@@ -25,7 +25,7 @@ jest.mock('@react-navigation/native', () => ({
     params: {},
   }),
   // Run the focus effect immediately in tests
-  useFocusEffect: (effect: any) => {
+  useFocusEffect: (effect: unknown) => {
     if (typeof effect === 'function') {
       const cleanup = effect();
       if (typeof cleanup === 'function') cleanup();

@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import { useUser } from '@/contexts/UserContext';
+import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { Tutor } from '@/services/api/types';
 
@@ -23,9 +25,6 @@ type Lesson = {
 };
 
 // サービスから取得するため、ローカルモックは削除
-
-import { useUser } from '@/contexts/UserContext';
-import { CoinManager } from '@/domain/coin/coinManager';
 
 export default function LessonScreen() {
   const [selectedTab, setSelectedTab] = useState<'upcoming' | 'completed'>('upcoming');

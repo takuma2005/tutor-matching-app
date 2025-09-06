@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 import TutorCard from '@/components/tutor/TutorCard';
 import type { Tutor } from '@/services/api/types';
-import { colors, spacing, typography, borderRadius } from '@/styles/theme';
+import { colors, spacing, typography } from '@/styles/theme';
 
 type Props = {
   title?: string;

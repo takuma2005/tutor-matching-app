@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,9 +35,9 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
       <View style={styles.profileCard} testID="profile-card">
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            {user?.avatar || (user as any)?.avatar_url ? (
+            {user?.avatar ? (
               <Image
-                source={{ uri: (user?.avatar || (user as any)?.avatar_url) as string }}
+                source={{ uri: user.avatar as string }}
                 style={styles.avatarImage}
                 testID="profile-avatar"
               />
@@ -79,8 +79,13 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
 
           <TouchableOpacity
             style={styles.menuItem}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onPress={() => (navigation as any).navigate('Home', { screen: 'CoinManagement' })}
+            onPress={() =>
+              (
+                navigation as unknown as {
+                  navigate: (route: string, params?: { screen?: string }) => void;
+                }
+              ).navigate('Home', { screen: 'CoinManagement' })
+            }
           >
             <View style={styles.menuIconContainer}>
               <MaterialIcons name="monetization-on" size={20} color={colors.warning} />

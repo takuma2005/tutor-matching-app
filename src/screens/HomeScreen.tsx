@@ -1,12 +1,10 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, type NavigationProp, type ParamListBase } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import TutorCard from '../components/tutor/TutorCard';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useUser } from '../contexts/UserContext';
 import { HomeStackParamList } from '../navigation/HomeStackNavigator';
@@ -16,7 +14,6 @@ import HomeHeader from '@/components/home/HomeHeader';
 import TutorsSection from '@/components/home/TutorsSection';
 import UpcomingLessonCard from '@/components/home/UpcomingLessonCard';
 import { useHomeData } from '@/hooks/useHomeData';
-import type { Tutor, Lesson } from '@/services/api/types';
 type HomeScreenNavigationProp = StackNavigationProp<HomeStackParamList, 'HomeMain'>;
 
 type Props = {
@@ -71,7 +68,9 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
             <UpcomingLessonCard
               upcoming={upcoming}
-              onPressDetail={() => (navigation as any).navigate('Lesson')}
+              onPressDetail={() =>
+                (navigation as unknown as NavigationProp<ParamListBase>).navigate('Lesson')
+              }
             />
           </View>
 

@@ -11,7 +11,6 @@ import type { HomeStackParamList } from '../navigation/HomeStackNavigator';
 import type { SearchStackParamList } from '../navigation/SearchStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
-import { useUser } from '@/contexts/UserContext';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { Tutor, Student } from '@/services/api/types';
@@ -28,7 +27,6 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { updateCoins } = useUser();
 
   // データ取得
   React.useEffect(() => {
