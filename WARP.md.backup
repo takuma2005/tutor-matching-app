@@ -1,0 +1,112 @@
+# WARP.md
+
+## 基本コマンド
+
+```bash
+# 開発サーバー
+npm start
+npm run android / ios / web
+
+# パッケージ管理
+npm install [package]
+expo start --clear  # キャッシュクリア
+```
+
+## プロジェクト概要
+
+**センパイ（Senpai）** - 先輩と後輩をマッチングする学習アプリ - React Native + Expo + TypeScript (strict mode)
+
+**技術スタック**: React 19.0.0, RN 0.79.6, Expo ~53.0.22, 新アーキテクチャ有効
+
+**主要エンティティ**: User/Tutor/Student, TutoringSession, Review, MatchRequest (`src/types/`)
+
+**予定統合**: Firebase/Supabase(Auth+DB), Stripe/PayPal, React Navigation
+
+
+## MCP ツール活用ルール
+
+**理解**: `list_dir` → `get_symbols_overview` → `find_symbol` → `find_referencing_symbols`
+**編集**: `edit_file`(複数変更一括), `replace_symbol_body`, `insert_*_symbol`
+**思考**: `think_about_task_adherence`(変更前), `think_about_collected_information`(作業後)
+**メモリ**: `write_memory`(重要情報保存), `read_memory`(過去参照)
+
+## 重要なルール
+
+### ドキュメント参照ルール
+- **会話開始時には必ず `docs/` フォルダを参照する**
+- `docs/requirements.md` - 最新の仕様と要件
+- `docs/requirements_diff.md` - 仕様変更の追跡
+- `docs/mobile-ui-spacing-guidelines.md` - モバイルUIスペーシングガイドライン
+- `docs/plan.md` - 開発スプリント計画
+
+### 要件参照
+- 用語統一：**後輩**（学ぶ側）、**先輩**（教える側）を使用する
+- 仕様変更があった場合は `docs/requirements_diff.md` に追記する
+
+### プロジェクト名
+- 正式サービス名：**センパイ（Senpai）**
+- コンセプト：「先輩に教えてもらう青春体験」
+
+## ベストプラクティス要約
+
+**TypeScript**: strict mode, 型ガード優先, `??`/`?.`活用, unknown > any
+**React**: useMemo/useCallback活用, 単一責任コンポーネント, React.memo()
+**エラー**: ErrorBoundary, try-catchでAPIエラー処理, 開発時のみログ出力
+**パフォーマンス**: FlatList最適化, 遅延ローディング, Tree shaking
+**セキュリティ**: 入力検証(Yup/Zod), APIキー環境変数, HTTPS強制
+**アクセシビリティ**: accessibilityLabel/Role, コントラスト比確保
+
+## 開発タスク
+
+- **型追加**: `src/types/index.ts`更新
+- **プラットフォーム固有**: Platform.OS or `.ios.tsx`/`.android.tsx`
+- **アセット**: `assets/`に配置
+- **設定**: `app.json`編集
+- **依存関係**: 追加後はMetro再起動
+
+## UI/UX設計ガイドライン
+
+### タイポグラフィ
+```typescript
+const Typography = {
+  fontSize: { h1: 28, h2: 24, h3: 20, body: 16, caption: 14, small: 12 },
+  lineHeight: { tight: 1.3, normal: 1.6, relaxed: 1.8 },
+  fontFamily: ['Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', 'sans-serif']
+};
+```
+
+### カラーシステム
+```typescript
+const Colors = {
+  primary: { main: '#2E5C9A', light: '#5B82BD', dark: '#1A3E6E' },
+  secondary: { main: '#E60033', light: '#FF4569', dark: '#B30025' },
+  neutral: { N900: '#1C1C1C', N500: '#808080', N100: '#E6E6E6', N0: '#FFFFFF' },
+  semantic: { success: '#4CAF50', warning: '#FF9800', error: '#F44336', info: '#2196F3' }
+};
+```
+
+### スペーシング（8pxグリッド）
+```typescript
+const Spacing = {
+  scale: { xs: 8, sm: 12, md: 16, lg: 24, xl: 32, xxl: 48 },
+  padding: {
+    button: { vertical: 12, horizontal: 24 },
+    card: 16,
+    listItem: { vertical: 12, horizontal: 16 },
+    screen: { top: 32, horizontal: 16, bottom: 24 }
+  }
+};
+```
+
+### タッチターゲット
+```typescript
+const TouchTarget = {
+  minSize: { ios: 44, android: 48, recommended: 48 },
+  feedback: { opacity: 0.7, scale: 0.95, duration: 100 }
+};
+```
+
+### プラットフォーム別対応
+**iOS**: SF Symbols活用, Dynamic Type対応, ブラー効果
+**Android**: Material Design, エレベーション(影), リップル効果
+**共通**: WCAG AA準拠のコントラスト比, 最小タッチ領域確保
