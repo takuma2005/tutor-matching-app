@@ -8,9 +8,10 @@ import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useUser } from '@/contexts/UserContext';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
-import type { Tutor } from '@/services/api/types';
+import { MockEscrowService } from '@/services/api/mock/escrowService';
+import type { Tutor, Lesson as ApiLesson } from '@/services/api/types';
 
-type LessonStatus = 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled';
+type LessonStatus = 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled' | 'rejected';
 
 type Lesson = {
   id: string;
@@ -20,6 +21,7 @@ type Lesson = {
   scheduledAt: Date;
   duration: number; // minutes
   status: LessonStatus;
+  escrow_status?: 'none' | 'reserved' | 'escrowed' | 'released' | 'refunded';
   price: number;
   notes?: string;
 };
@@ -30,7 +32,9 @@ export default function LessonScreen() {
   const [selectedTab, setSelectedTab] = useState<'upcoming' | 'completed'>('upcoming');
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { user } = useUser();
+  const escrowService = new MockEscrowService();
 
   React.useEffect(() => {
     const api = getApiClient();
@@ -48,14 +52,8 @@ export default function LessonScreen() {
         subject: l.subject,
         scheduledAt: new Date(l.scheduled_at),
         duration: l.duration_minutes,
-        status:
-          l.status === 'scheduled'
-            ? 'confirmed'
-            : l.status === 'in_progress'
-              ? 'in-progress'
-              : l.status === 'completed'
-                ? 'completed'
-                : 'cancelled',
+        status: l.status,
+        escrow_status: l.escrow_status,
         price: l.coin_cost,
         notes: l.lesson_notes,
       }));
@@ -74,9 +72,9 @@ export default function LessonScreen() {
       const isFuture = t >= now;
       const isUpcomingStatus =
         lesson.status === 'pending' ||
-        lesson.status === 'confirmed' ||
-        lesson.status === 'in-progress';
-      return isUpcomingStatus && (isFuture || lesson.status === 'in-progress');
+        lesson.status === 'approved' ||
+        lesson.status === 'in_progress';
+      return isUpcomingStatus && (isFuture || lesson.status === 'in_progress');
     });
   }, [lessons, now]);
 
@@ -105,14 +103,15 @@ export default function LessonScreen() {
   const getStatusColor = (status: LessonStatus) => {
     switch (status) {
       case 'pending':
-        return colors.secondary; // 予定（ペンディング）はセカンダリ系に
-      case 'confirmed':
-        return colors.primary;
-      case 'in-progress':
+        return colors.warning;
+      case 'approved':
+        return colors.success;
+      case 'in_progress':
         return colors.primary;
       case 'completed':
         return colors.primary;
       case 'cancelled':
+      case 'rejected':
         return colors.error;
       default:
         return colors.gray500;
@@ -123,12 +122,16 @@ export default function LessonScreen() {
     switch (status) {
       case 'pending':
         return '承認待ち';
-      case 'confirmed':
-        return '予約確定';
+      case 'approved':
+        return '承認済み';
+      case 'in_progress':
+        return '授業中';
       case 'completed':
         return '完了';
       case 'cancelled':
         return 'キャンセル';
+      case 'rejected':
+        return '拒否';
       default:
         return status;
     }
@@ -142,6 +145,143 @@ export default function LessonScreen() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  // エスクロー操作ボタンをレンダリング
+  const renderActionButtons = (item: Lesson) => {
+    switch (item.status) {
+      case 'approved':
+      case 'in_progress':
+        return (
+          <View style={styles.actionButtonsRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.completeButton]}
+              disabled={isLoading}
+              onPress={() => handleCompleteLesson(item)}
+            >
+              <Text style={styles.completeButtonText}>
+                {isLoading ? '処理中...' : '完了にする'}
+              </Text>
+            </TouchableOpacity>
+
+            {item.status === 'approved' && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton]}
+                disabled={isLoading}
+                onPress={() => handleCancelLesson(item)}
+              >
+                <Text style={styles.cancelButtonText}>キャンセル</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+
+      case 'pending':
+        return (
+          <View style={styles.actionButtonsRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.cancelButton]}
+              disabled={isLoading}
+              onPress={() => handleCancelLesson(item)}
+            >
+              <Text style={styles.cancelButtonText}>申請キャンセル</Text>
+            </TouchableOpacity>
+          </View>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // 授業完了処理
+  const handleCompleteLesson = async (lesson: Lesson) => {
+    Alert.alert('授業完了', 'この授業を完了し、先生に送金しますか？', [
+      { text: 'キャンセル', style: 'cancel' },
+      {
+        text: '完了する',
+        onPress: async () => {
+          setIsLoading(true);
+          try {
+            const response = await escrowService.completeLesson(lesson.id);
+
+            if (response.success) {
+              // レッスンリストを更新
+              setLessons((prev) =>
+                prev.map((l) =>
+                  l.id === lesson.id ? { ...l, status: 'completed', escrow_status: 'released' } : l,
+                ),
+              );
+
+              // コイン残高を更新（ユーザーコンテキストから）
+              if (user) {
+                CoinManager.syncBalance(user.id);
+              }
+
+              Alert.alert('完了しました', '授業が完了し、先生に送金しました。');
+            } else {
+              Alert.alert('エラー', response.error || '完了処理に失敗しました。');
+            }
+          } catch (error) {
+            Alert.alert('エラー', 'ネットワークエラーが発生しました。');
+          } finally {
+            setIsLoading(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  // 授業キャンセル処理
+  const handleCancelLesson = async (lesson: Lesson) => {
+    const hoursUntil = (lesson.scheduledAt.getTime() - Date.now()) / (1000 * 60 * 60);
+
+    if (lesson.status === 'approved' && hoursUntil < 12) {
+      Alert.alert('キャンセル不可', '開始12時間前を過ぎているため、キャンセルできません。');
+      return;
+    }
+
+    Alert.alert(
+      'キャンセル確認',
+      `この授業をキャンセルし、${lesson.price.toLocaleString()}コインを返金しますか？`,
+      [
+        { text: '戻る', style: 'cancel' },
+        {
+          text: 'キャンセルする',
+          style: 'destructive',
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+              const response = await escrowService.cancelLesson(lesson.id);
+
+              if (response.success) {
+                // レッスンリストを更新
+                setLessons((prev) =>
+                  prev.map((l) =>
+                    l.id === lesson.id
+                      ? { ...l, status: 'cancelled', escrow_status: 'refunded' }
+                      : l,
+                  ),
+                );
+
+                // コイン残高を更新
+                if (user) {
+                  CoinManager.syncBalance(user.id);
+                }
+
+                Alert.alert('キャンセル完了', '返金処理が完了しました。');
+              } else {
+                Alert.alert('エラー', response.error || 'キャンセル処理に失敗しました。');
+              }
+            } catch (error) {
+              Alert.alert('エラー', 'ネットワークエラーが発生しました。');
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const renderLessonItem = ({ item }: { item: Lesson }) => {
@@ -192,65 +332,8 @@ export default function LessonScreen() {
           )}
         </View>
 
-        {item.status === 'confirmed' && (
-          <View style={styles.actionButtonsRow}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.completeButton]}
-              onPress={() => {
-                Alert.alert('完了確認', 'この授業を完了し、送金を確定しますか？', [
-                  { text: '戻る', style: 'cancel' },
-                  {
-                    text: '完了にする',
-                    style: 'default',
-                    onPress: () => {
-                      // 課金確定（モック）: 既に予約時に減算済みのため、状態のみ更新
-                      setLessons((prev) =>
-                        prev.map((l) => (l.id === item.id ? { ...l, status: 'completed' } : l)),
-                      );
-                      Alert.alert('完了しました', '授業が完了し、送金が確定しました。');
-                    },
-                  },
-                ]);
-              }}
-            >
-              <Text style={styles.completeButtonText}>完了にする</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.cancelButton]}
-              onPress={() => {
-                if (!user) return;
-                const hoursUntil = (item.scheduledAt.getTime() - Date.now()) / (1000 * 60 * 60);
-                if (hoursUntil < 12) {
-                  Alert.alert(
-                    'キャンセル不可',
-                    '開始12時間前を過ぎているため、キャンセルできません。',
-                  );
-                  return;
-                }
-                Alert.alert(
-                  'キャンセル確認',
-                  `この授業をキャンセルし、${item.price.toLocaleString()}コインを返金しますか？`,
-                  [
-                    { text: '戻る', style: 'cancel' },
-                    {
-                      text: 'キャンセルする',
-                      style: 'destructive',
-                      onPress: () => {
-                        CoinManager.applyDelta(user.id, item.price, 'adjust', '授業キャンセル返金');
-                        setLessons((prev) =>
-                          prev.map((l) => (l.id === item.id ? { ...l, status: 'cancelled' } : l)),
-                        );
-                        Alert.alert('キャンセル完了', '返金処理が完了しました。');
-                      },
-                    },
-                  ],
-                );
-              }}
-            >
-              <Text style={styles.completeButtonText}>キャンセル</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* エスクロー操作ボタン */}
+        {renderActionButtons(item)}
       </TouchableOpacity>
     );
   };

@@ -12,7 +12,7 @@ import { SearchStackParamList } from '../navigation/SearchStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useTutorSearch } from '@/hooks/useTutorSearch';
+import { useTutorSearch, type SortOption } from '@/hooks/useTutorSearch';
 import type { Tutor } from '@/services/api/types';
 
 type SearchScreenNavigationProp = StackNavigationProp<SearchStackParamList, 'SearchMain'>;
@@ -24,14 +24,17 @@ type Props = {
 export default function SearchScreen({ navigation }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user: authUser } = useAuth();
-  const { tutors, isLoading, searchText, setSearchText, filters, setFilters } = useTutorSearch({
-    subject: '',
-    minRate: 0,
-    maxRate: 5000,
-    onlineOnly: false,
-  });
+  const { tutors, isLoading, searchText, setSearchText, filters, setFilters, sortBy, setSortBy } =
+    useTutorSearch({
+      subject: '',
+      minRate: 0,
+      maxRate: 5000,
+      onlineOnly: false,
+    });
   const [showFilters, setShowFilters] = useState(false);
-  const [activeFilterTab, setActiveFilterTab] = useState<'subject' | 'rate' | 'other'>('subject');
+  const [activeFilterTab, setActiveFilterTab] = useState<'subject' | 'rate' | 'other' | 'sort'>(
+    'subject',
+  );
 
   const subjects = ['数学', '英語', '物理', '化学', '生物', '国語', '現代文'];
 
@@ -101,7 +104,7 @@ export default function SearchScreen({ navigation }: Props) {
         <View style={styles.filtersContainer}>
           {/* Segmented tabs */}
           <View style={styles.tabsRow}>
-            {(['subject', 'rate', 'other'] as const).map((key) => (
+            {(['subject', 'rate', 'other', 'sort'] as const).map((key) => (
               <TouchableOpacity
                 key={key}
                 style={[styles.tabItem, activeFilterTab === key && styles.tabItemActive]}
@@ -109,8 +112,8 @@ export default function SearchScreen({ navigation }: Props) {
               >
                 <Text style={[styles.tabLabel, activeFilterTab === key && styles.tabLabelActive]}>
                   {
-                    { subject: '科目', rate: '料金', other: 'その他' }[
-                      key as 'subject' | 'rate' | 'other'
+                    { subject: '科目', rate: '料金', other: 'その他', sort: '並び替え' }[
+                      key as 'subject' | 'rate' | 'other' | 'sort'
                     ]
                   }
                 </Text>
@@ -213,6 +216,35 @@ export default function SearchScreen({ navigation }: Props) {
                   />
                   <Text style={styles.toggleText}>オンライン可能のみ</Text>
                 </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          {activeFilterTab === 'sort' && (
+            <>
+              <Text style={styles.filterTitle}>並び替え</Text>
+              <View style={styles.subjectTags}>
+                {[
+                  { key: 'recommended', label: 'おすすめ順' },
+                  { key: 'price_low', label: '料金安い順' },
+                  { key: 'price_high', label: '料金高い順' },
+                  { key: 'rating', label: '評価順' },
+                ].map((sort) => (
+                  <TouchableOpacity
+                    key={sort.key}
+                    style={[styles.subjectTag, sortBy === sort.key && styles.subjectTagActive]}
+                    onPress={() => setSortBy(sort.key as SortOption)}
+                  >
+                    <Text
+                      style={[
+                        styles.subjectTagText,
+                        sortBy === sort.key && styles.subjectTagTextActive,
+                      ]}
+                    >
+                      {sort.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </>
           )}

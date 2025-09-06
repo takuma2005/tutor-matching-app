@@ -9,20 +9,17 @@ import {
   PaginatedResponse,
   TutorSearchFilters,
   LessonSearchFilters,
+  MatchRequest,
+  MatchStatus,
 } from '../types';
-import {
-  mockStudents,
-  mockTutors,
-  mockLessons,
-  delay,
-  generateId,
-  getCurrentTimestamp,
-} from './data';
+import { mockDb, delay, generateId, getCurrentTimestamp } from './data';
+import { MockMatchingService } from './matchingService';
 
 class MockStudentService implements StudentService {
-  private students: Student[] = [...mockStudents];
-  private tutors: Tutor[] = [...mockTutors];
-  private lessons: Lesson[] = [...mockLessons];
+  private students: Student[] = mockDb.students;
+  private tutors: Tutor[] = mockDb.tutors;
+  private lessons: Lesson[] = mockDb.lessons;
+  private matchingService = new MockMatchingService();
 
   async getProfile(userId: string): Promise<ApiResponse<Student>> {
     await delay(300);
@@ -299,6 +296,22 @@ class MockStudentService implements StudentService {
       data: this.lessons[lessonIndex],
       success: true,
     };
+  }
+
+  // マッチング関連メソッド
+  async sendMatchRequest(tutorId: string, message: string): Promise<ApiResponse<MatchRequest>> {
+    // TODO: 現在のユーザーIDを取得する方法を実装
+    const studentId = 'student-1'; // 仮の実装
+    return this.matchingService.sendMatchRequest(studentId, tutorId, message);
+  }
+
+  async getMatchRequests(status?: MatchStatus): Promise<ApiResponse<MatchRequest[]>> {
+    const studentId = 'student-1'; // 仮の実装
+    return this.matchingService.getStudentMatchRequests(studentId, status);
+  }
+
+  async cancelMatchRequest(matchId: string): Promise<ApiResponse<MatchRequest>> {
+    return this.matchingService.cancelMatchRequest(matchId);
   }
 }
 

@@ -1,6 +1,15 @@
 // モックアダプター用のテストデータ
 
-import { Student, Tutor, Lesson, CoinTransaction, TimeSlot } from '../types';
+import {
+  Student,
+  Tutor,
+  Lesson,
+  CoinTransaction,
+  TimeSlot,
+  MatchRequest,
+  Message,
+  ChatRoom,
+} from '../types';
 
 // テスト用の時間スロット
 const weekdayMorning: TimeSlot[] = [
@@ -337,6 +346,32 @@ export const mockCoinTransactions: CoinTransaction[] = [
     created_at: '2024-01-18T15:30:00Z',
   },
 ];
+
+// モックマッチング申請データ
+export const mockMatchRequests: MatchRequest[] = [
+  // テスト用の初期データは空で開始
+];
+
+// モックチャットルームデータ
+export const mockChatRooms: ChatRoom[] = [
+  // テスト用の初期データは空で開始
+];
+
+// モックメッセージデータ
+export const mockMessages: Message[] = [
+  // テスト用の初期データは空で開始
+];
+
+// メインのMockDB
+export const mockDb = {
+  students: mockStudents,
+  tutors: mockTutors,
+  lessons: mockLessons,
+  coinTransactions: mockCoinTransactions,
+  matchRequests: mockMatchRequests,
+  chatRooms: mockChatRooms,
+  messages: mockMessages,
+};
 
 // ヘルパー関数
 export const delay = (ms: number): Promise<void> =>

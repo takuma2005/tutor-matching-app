@@ -8,14 +8,14 @@ type Props = {
   onPressSearch?: () => void;
   onPressReserve?: () => void;
   onPressFavorite?: () => void;
-  onPressResults?: () => void;
+  onPressMatchRequests?: () => void;
 };
 
 export default function QuickActions({
   onPressSearch,
   onPressReserve,
   onPressFavorite,
-  onPressResults,
+  onPressMatchRequests,
 }: Props) {
   return (
     <View style={styles.quickActionCard}>
@@ -38,11 +38,11 @@ export default function QuickActions({
           </View>
           <Text style={styles.quickActionText}>お気に入り</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.quickActionItem} onPress={onPressResults}>
+        <TouchableOpacity style={styles.quickActionItem} onPress={onPressMatchRequests}>
           <View style={styles.quickActionIcon}>
-            <MaterialIcons name="assessment" size={24} color={colors.primary} />
+            <MaterialIcons name="person-add" size={24} color={colors.primary} />
           </View>
-          <Text style={styles.quickActionText}>成果</Text>
+          <Text style={styles.quickActionText}>申請状態</Text>
         </TouchableOpacity>
       </View>
     </View>

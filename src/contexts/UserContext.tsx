@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
 
 import { getApiClient } from '../services/api/mock';
 
@@ -50,7 +58,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const lastRefreshRef = React.useRef<number>(0);
   const { user: authUser } = useAuth();
 
-  const loadUserProfile = async () => {
+  const loadUserProfile = useCallback(async () => {
     const userId = authUser?.id;
     if (!userId) {
       // 認証ユーザがいない場合は何もしない（ゲスト）
@@ -87,44 +95,47 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authUser?.id]);
 
-  const updateUserProfile = async (updates: Partial<UserProfile>): Promise<boolean> => {
-    if (!user) return false;
+  const updateUserProfile = useCallback(
+    async (updates: Partial<UserProfile>): Promise<boolean> => {
+      if (!user) return false;
 
-    try {
-      setLoading(true);
-      setError(null);
+      try {
+        setLoading(true);
+        setError(null);
 
-      const api = getApiClient();
-      const response = await api.student.updateProfile(user.id, {
-        name: updates.name || user.name,
-        grade: updates.grade || user.grade,
-        email: updates.email || user.email,
-        phone: updates.phone || user.phone,
-        subjects_interested: updates.interestedSubjects || user.interestedSubjects,
-        bio: updates.bio || user.bio,
-        school: updates.school || user.school,
-      });
+        const api = getApiClient();
+        const response = await api.student.updateProfile(user.id, {
+          name: updates.name || user.name,
+          grade: updates.grade || user.grade,
+          email: updates.email || user.email,
+          phone: updates.phone || user.phone,
+          subjects_interested: updates.interestedSubjects || user.interestedSubjects,
+          bio: updates.bio || user.bio,
+          school: updates.school || user.school,
+        });
 
-      if (response?.success) {
-        setUser((prev) => (prev ? { ...prev, ...updates } : null));
-        return true;
-      } else {
+        if (response?.success) {
+          setUser((prev) => (prev ? { ...prev, ...updates } : null));
+          return true;
+        } else {
+          setError('プロフィールの更新に失敗しました');
+          return false;
+        }
+      } catch (err) {
+        console.error('Failed to update user profile:', err);
         setError('プロフィールの更新に失敗しました');
         return false;
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Failed to update user profile:', err);
-      setError('プロフィールの更新に失敗しました');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [user],
+  );
 
-  const refreshCoins = async () => {
-    if (!user) return;
+  const refreshCoins = useCallback(async () => {
+    if (!user?.id) return;
 
     const now = Date.now();
     // 5秒以内の連続呼び出しや同時実行を抑止
@@ -144,11 +155,11 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       lastRefreshRef.current = Date.now();
       refreshingRef.current = false;
     }
-  };
+  }, [user?.id]);
 
-  const updateCoins = (value: number) => {
+  const updateCoins = useCallback((value: number) => {
     setUser((prev) => (prev ? { ...prev, coins: value } : prev));
-  };
+  }, []);
 
   useEffect(() => {
     // 認証ユーザの変化に合わせてロード
@@ -165,15 +176,18 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const contextValue: UserContextType = {
-    user,
-    loading,
-    error,
-    loadUserProfile,
-    updateUserProfile,
-    refreshCoins,
-    updateCoins,
-  };
+  const contextValue: UserContextType = useMemo(
+    () => ({
+      user,
+      loading,
+      error,
+      loadUserProfile,
+      updateUserProfile,
+      refreshCoins,
+      updateCoins,
+    }),
+    [user, loading, error, loadUserProfile, updateUserProfile, refreshCoins, updateCoins],
+  );
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
 };

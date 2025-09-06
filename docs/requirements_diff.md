@@ -4,6 +4,44 @@
 
 ## 変更履歴
 
+### 2025-09-06（授業申請UX/ナビゲーション/境界線・視認性向上）
+
+- 無限レンダー修正
+  - UserContext: 公開関数を useCallback 化、Provider value を useMemo 化して依存のチャーンを抑制
+  - NotificationScreen: モック通知サービスのインスタンスを useMemo 化、FlatList の in-place sort を回避
+- 授業申請フロー/画面
+  - ChatDetailScreen: 「新しい授業を申請」押下で確認ダイアログなしに直接入力画面へ遷移
+  - ChatStackNavigator: LessonRequest 画面を追加登録
+  - LessonRequestScreen: 大幅改修
+    - react-native-modal-datetime-picker による日時モーダル統合（日本語、24h）
+    - react-hook-form + zod による一元バリデーション（即時検証）
+    - date-fns による終了予定時刻のリアルタイム算出・表示
+    - クイック選択（今日/明日、19/20/21時）と時間ステッパー（±30分、30〜180分）
+    - react-native-calendars 導入。日本語ロケール設定、カレンダーから日付選択可、曜日表示
+    - 日付表示を日本語形式（M月d日(EEE)）に統一
+- UI/視認性
+  - TabNavigator: タブバー上部に hairline の境界線を追加
+  - CoinManagementScreen: SafeArea（top）適用、パッケージの縦間隔を margin で安定化
+  - MyPageScreen: ヘッダー/プロフィール/セクションの境界線・区切り線を追加し境目を明確化
+  - MyPage から「お気に入り」「申請状況」に遷移できるメニューを追加
+
+影響ファイル（主な）
+
+- src/contexts/UserContext.tsx
+- src/screens/NotificationScreen.tsx
+- src/navigation/ChatStackNavigator.tsx, src/screens/ChatDetailScreen.tsx
+- src/screens/LessonRequestScreen.tsx（大幅改修）
+- src/screens/CoinManagementScreen.tsx
+- src/navigation/TabNavigator.tsx
+- src/screens/MyPageScreen.tsx, src/navigation/MyPageStackNavigator.tsx
+
+追加パッケージ
+
+- react-native-modal-datetime-picker, @react-native-community/datetimepicker
+- react-hook-form, zod, @hookform/resolvers
+- date-fns
+- react-native-calendars
+
 ### 2025-09-06（ホームUI/コイン設計/テスト安定化）
 
 - ホームUI

@@ -1,27 +1,20 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import type { ComponentProps } from 'react';
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import type { Notification, NotificationType } from '@/services/api/mock/notificationService';
+import { MockNotificationService } from '@/services/api/mock/notificationService';
+
 type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
 
-type NotificationType =
-  | 'lesson_request'
-  | 'lesson_confirmed'
-  | 'lesson_reminder'
-  | 'message'
-  | 'system';
-
-type Notification = {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
+// 通知サービスから型をインポート
+type LocalNotification = Notification & {
   timestamp: Date;
-  isRead: boolean;
   actionRequired?: boolean;
 };
 
@@ -71,20 +64,63 @@ const mockNotifications: Notification[] = [
 ];
 
 export default function NotificationScreen() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<LocalNotification[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const notificationService = useMemo(() => new MockNotificationService(), []);
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      // 現在は学生 ID をハードコード
+      const response = await notificationService.getUserNotifications('student-1');
+
+      if (response.success) {
+        const transformedNotifications: LocalNotification[] = response.data.map((n) => ({
+          ...n,
+          timestamp: new Date(n.created_at),
+          isRead: n.is_read,
+          actionRequired: ['match_request_received', 'lesson_request_received'].includes(n.type),
+        }));
+
+        setNotifications(transformedNotifications);
+      }
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [notificationService]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsLoading(true);
+      loadNotifications();
+    }, [loadNotifications]),
+  );
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    loadNotifications();
+  };
 
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
-      case 'lesson_request':
+      case 'match_request_received':
+      case 'match_request_approved':
+      case 'match_request_rejected':
+        return 'person-add';
+      case 'lesson_request_received':
+      case 'lesson_request_approved':
+      case 'lesson_request_rejected':
         return 'school';
-      case 'lesson_confirmed':
+      case 'lesson_started':
+      case 'lesson_completed':
         return 'event-available';
-      case 'lesson_reminder':
-        return 'alarm';
-      case 'message':
+      case 'message_received':
         return 'message';
-      case 'system':
-        return 'info';
+      case 'payment_received':
+        return 'monetization-on';
       default:
         return 'notifications';
     }
@@ -92,16 +128,25 @@ export default function NotificationScreen() {
 
   const getNotificationColor = (type: NotificationType) => {
     switch (type) {
-      case 'lesson_request':
+      case 'match_request_received':
         return colors.warning;
-      case 'lesson_confirmed':
+      case 'match_request_approved':
         return colors.success;
-      case 'lesson_reminder':
+      case 'match_request_rejected':
+        return colors.error;
+      case 'lesson_request_received':
+        return colors.warning;
+      case 'lesson_request_approved':
+        return colors.success;
+      case 'lesson_request_rejected':
+        return colors.error;
+      case 'lesson_started':
+      case 'lesson_completed':
         return colors.primary;
-      case 'message':
+      case 'message_received':
         return colors.info;
-      case 'system':
-        return colors.gray500;
+      case 'payment_received':
+        return colors.success;
       default:
         return colors.gray400;
     }
@@ -130,20 +175,79 @@ export default function NotificationScreen() {
     }
   };
 
-  const handleNotificationPress = (notification: Notification) => {
+  const handleNotificationPress = async (notification: LocalNotification) => {
     // 未読の場合は既読にする
     if (!notification.isRead) {
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)),
-      );
+      try {
+        await notificationService.markAsRead(notification.id);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)),
+        );
+      } catch (error) {
+        console.error('Failed to mark notification as read:', error);
+      }
     }
 
     // 通知タイプに応じて適切な画面に遷移
     // TODO: ナビゲーション実装
+    switch (notification.type) {
+      case 'match_request_received':
+      case 'match_request_approved':
+        // マッチング申請画面へ遷移
+        break;
+      case 'lesson_request_received':
+      case 'lesson_request_approved':
+        // 授業管理画面へ遷移
+        break;
+      case 'message_received':
+        // チャット画面へ遷移
+        break;
+      default:
+        break;
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  const markAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead('student-1');
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
+  };
+
+  const addDemoNotifications = async () => {
+    try {
+      await Promise.all([
+        notificationService.createNotification(
+          'student-1',
+          'message_received',
+          '新着メッセージ',
+          'テスト本文',
+        ),
+        notificationService.createNotification(
+          'student-1',
+          'match_request_received',
+          'マッチング申請',
+          '田中先輩からの申請が届きました',
+        ),
+        notificationService.createNotification(
+          'student-1',
+          'lesson_request_approved',
+          '授業申請承認',
+          '英語の授業が承認されました',
+        ),
+        notificationService.createNotification(
+          'student-1',
+          'payment_received',
+          '入金',
+          'コインの入金が反映されました',
+        ),
+      ]);
+      loadNotifications();
+    } catch (error) {
+      console.error('Failed to create demo notifications:', error);
+    }
   };
 
   const renderNotification = ({ item }: { item: Notification }) => (
@@ -204,20 +308,28 @@ export default function NotificationScreen() {
             </View>
           )}
         </View>
-        {unreadCount > 0 && (
-          <TouchableOpacity style={styles.markAllButton} onPress={markAllAsRead}>
-            <Text style={styles.markAllText}>すべて既読</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.headerRight}>
+          {__DEV__ && (
+            <TouchableOpacity style={styles.demoButton} onPress={addDemoNotifications}>
+              <Text style={styles.demoText}>デモ追加</Text>
+            </TouchableOpacity>
+          )}
+          {unreadCount > 0 && (
+            <TouchableOpacity style={styles.markAllButton} onPress={markAllAsRead}>
+              <Text style={styles.markAllText}>すべて既読</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* 通知リスト */}
       <FlatList
-        data={notifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())}
+        data={[...notifications].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())}
         renderItem={renderNotification}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <MaterialIcons name="notifications-none" size={64} color={colors.gray300} />
@@ -248,6 +360,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: typography.sizes?.h2 || 24,
     fontWeight: '700',
@@ -275,6 +391,11 @@ const styles = StyleSheet.create({
   markAllText: {
     fontSize: typography.sizes?.caption || 12,
     color: colors.primary,
+    fontWeight: '500',
+  },
+  demoText: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray600,
     fontWeight: '500',
   },
   listContent: {

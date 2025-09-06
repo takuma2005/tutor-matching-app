@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ChatStackNavigator from './ChatStackNavigator';
@@ -37,7 +38,7 @@ export default function TabNavigator() {
           tabBarStyle: {
             backgroundColor: colors.surface,
             borderTopColor: colors.gray200,
-            borderTopWidth: 0,
+            borderTopWidth: StyleSheet.hairlineWidth,
             paddingBottom: bottomPad,
             paddingTop: 6,
             height: tabBarHeight,

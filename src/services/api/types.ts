@@ -52,13 +52,16 @@ export interface Lesson {
   tutor_id: string;
   student_id: string;
   subject: string;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled' | 'rejected';
   scheduled_at: string;
   duration_minutes: number;
   coin_cost: number;
   lesson_notes?: string;
   tutor_feedback?: string;
   student_rating?: number;
+  escrow_status?: 'none' | 'reserved' | 'escrowed' | 'released' | 'refunded';
+  approved_at?: string;
+  completed_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -67,10 +70,27 @@ export interface CoinTransaction {
   id: string;
   user_id: string;
   amount: number;
-  type: 'purchase' | 'spend' | 'refund';
+  type: 'purchase' | 'spend' | 'refund' | 'matching' | 'lesson_payment' | 'lesson_refund';
   description: string;
   stripe_payment_intent_id?: string;
+  related_id?: string; // マッチングID、レッスンIDなど
+  status?: 'pending' | 'completed' | 'cancelled';
   created_at: string;
+}
+
+// マッチング関連の型
+export type MatchStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'expired';
+
+export interface MatchRequest {
+  id: string;
+  student_id: string;
+  tutor_id: string;
+  message: string;
+  status: MatchStatus;
+  coin_cost: number;
+  created_at: string;
+  updated_at: string;
+  expires_at?: string;
 }
 
 // API レスポンス型
@@ -122,6 +142,12 @@ export interface StudentService {
     page?: number,
     limit?: number,
   ): Promise<PaginatedResponse<Tutor>>;
+
+  // マッチング関連
+  sendMatchRequest(tutorId: string, message: string): Promise<ApiResponse<MatchRequest>>;
+  getMatchRequests(status?: MatchStatus): Promise<ApiResponse<MatchRequest[]>>;
+  cancelMatchRequest(matchId: string): Promise<ApiResponse<MatchRequest>>;
+
   bookLesson(
     tutorId: string,
     lessonData: Omit<Lesson, 'id' | 'status' | 'created_at' | 'updated_at'>,
@@ -137,6 +163,12 @@ export interface StudentService {
 export interface TutorService {
   getProfile(userId: string): Promise<ApiResponse<Tutor>>;
   updateProfile(userId: string, updates: Partial<Tutor>): Promise<ApiResponse<Tutor>>;
+
+  // マッチング関連
+  getMatchRequests(status?: MatchStatus): Promise<ApiResponse<MatchRequest[]>>;
+  approveMatchRequest(matchId: string): Promise<ApiResponse<MatchRequest>>;
+  rejectMatchRequest(matchId: string, reason?: string): Promise<ApiResponse<MatchRequest>>;
+
   getLessons(
     filters?: LessonSearchFilters,
     page?: number,

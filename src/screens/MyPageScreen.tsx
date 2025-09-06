@@ -94,13 +94,39 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
             <MaterialIcons name="chevron-right" size={20} color={colors.gray400} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() =>
+              (
+                navigation as unknown as {
+                  navigate: (route: string, params?: { screen?: string }) => void;
+                }
+              ).navigate('Home', { screen: 'Favorite' })
+            }
+          >
             <View style={styles.menuIconContainer}>
-              <MaterialIcons name="notifications" size={20} color={colors.gray600} />
+              <MaterialIcons name="favorite" size={20} color={colors.error} />
             </View>
-            <Text style={styles.menuText}>通知設定</Text>
+            <Text style={styles.menuText}>お気に入り</Text>
             <MaterialIcons name="chevron-right" size={20} color={colors.gray400} />
           </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('MatchRequests')}
+          >
+            <View style={styles.menuIconContainer}>
+              <MaterialIcons name="assignment" size={20} color={colors.gray600} />
+            </View>
+            <Text style={styles.menuText}>申請状況</Text>
+            <MaterialIcons name="chevron-right" size={20} color={colors.gray400} />
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
 
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuIconContainer}>
@@ -109,6 +135,8 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
             <Text style={styles.menuText}>ヘルプ・サポート</Text>
             <MaterialIcons name="chevron-right" size={20} color={colors.gray400} />
           </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
 
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuIconContainer}>
@@ -135,6 +163,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray50,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.gray200,
   },
   title: {
     fontSize: typography.sizes?.h2 || 24,
@@ -143,10 +173,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   profileCard: {
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.white,
     marginHorizontal: 0,
     marginTop: 0,
     borderRadius: 0,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.gray200,
   },
   profileHeader: {
     flexDirection: 'row',
@@ -212,11 +244,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   section: {
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.white,
     marginHorizontal: 0,
     marginTop: spacing.sm,
     padding: spacing.lg,
     borderRadius: 0,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.gray200,
   },
   sectionTitle: {
     fontSize: typography.sizes?.h4 || 18,
@@ -244,6 +279,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: typography.sizes?.body || 16,
     color: colors.gray900,
+  },
+  menuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.gray200,
+    marginLeft: spacing.sm + 36 + spacing.md,
   },
   bottomSpacing: {
     height: spacing.xl,

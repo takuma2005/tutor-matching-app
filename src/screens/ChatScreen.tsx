@@ -43,7 +43,7 @@ export default function ChatScreen({ navigation }: Props) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const api = getApiClient();
+  const api = React.useMemo(() => getApiClient(), []);
 
   const loadChatRooms = useCallback(
     async (studentId: string) => {
@@ -55,7 +55,7 @@ export default function ChatScreen({ navigation }: Props) {
         setChatRooms(rooms);
       }
     },
-    [api.chat],
+    [api],
   );
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function ChatScreen({ navigation }: Props) {
       mounted = false;
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     };
-  }, [api.student, loadChatRooms]);
+  }, [api, loadChatRooms]);
 
   useFocusEffect(
     useCallback(() => {

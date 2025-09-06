@@ -1,7 +1,19 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import type { StackScreenProps } from '@react-navigation/stack';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import type { ImageStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,7 +23,6 @@ import type { HomeStackParamList } from '../navigation/HomeStackNavigator';
 import type { SearchStackParamList } from '../navigation/SearchStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
-import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { Tutor, Student } from '@/services/api/types';
 
@@ -27,6 +38,11 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const { isFavorite, toggleFavorite } = useFavorites();
+
+  // マッチング申請モーダルの状態
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [matchMessage, setMatchMessage] = useState('');
+  const [messageError, setMessageError] = useState('');
 
   // データ取得
   React.useEffect(() => {
@@ -76,11 +92,37 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
     if ((currentStudent?.coins ?? 0) < MATCHING_COST) {
       Alert.alert(
         'コインが不足しています',
-        `マッチング申請には${MATCHING_COST}コインが必要です。現在の残高：${currentStudent?.coins ?? 0}コイン`,
-        [{ text: 'OK' }],
+        `マッチング申請には${MATCHING_COST}コインが必要です。\n\nコイン購入画面に移動しますか？`,
+        [
+          { text: 'キャンセル', style: 'cancel' },
+          {
+            text: 'コイン購入',
+            onPress: () => {
+              // TODO: CoinManagementScreen への遷移を実装
+              // navigation.navigate('CoinManagement');
+              Alert.alert('コイン購入', 'コイン購入画面への遷移は後日実装予定です');
+            },
+          },
+        ],
       );
       return;
     }
+
+    // メッセージ入力モーダルを表示
+    setMatchMessage('');
+    setMessageError('');
+    setShowMatchModal(true);
+  };
+
+  const handleSendMatchRequest = () => {
+    // メッセージのバリデーション
+    if (matchMessage.trim().length < 20) {
+      setMessageError('メッセージは20文字以上で入力してください。');
+      return;
+    }
+
+    setMessageError('');
+    setShowMatchModal(false);
 
     // 確認ダイアログ
     Alert.alert(
@@ -90,24 +132,34 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
         { text: 'キャンセル', style: 'cancel' },
         {
           text: '申請する',
-          onPress: () => {
+          onPress: async () => {
             setIsLoading(true);
-            // ドメイン経由で即時反映（モックはトランザクションを記録し、残高も更新）
-            CoinManager.applyDelta(
-              currentStudent?.id ?? 'student-1',
-              -MATCHING_COST,
-              'matching',
-              'マッチング申請',
-            );
-            // 実際のAPIコールをシミュレート
-            setTimeout(() => {
+            try {
+              const api = getApiClient();
+              const response = await api.student.sendMatchRequest(tutorId, matchMessage.trim());
+
+              if (response.success) {
+                // 残高を更新（モックデータから取得）
+                const updatedStudent = await api.student.getProfile(
+                  currentStudent?.id ?? 'student-1',
+                );
+                if (updatedStudent.success) {
+                  setCurrentStudent(updatedStudent.data);
+                }
+
+                Alert.alert(
+                  '申請完了',
+                  `${tutor.name}さんにマッチング申請を送信しました！\n相手の返答をお待ちください。`,
+                  [{ text: 'OK', onPress: () => navigation.goBack() }],
+                );
+              } else {
+                Alert.alert('エラー', response.error || 'マッチング申請に失敗しました。');
+              }
+            } catch (error) {
+              Alert.alert('エラー', 'ネットワークエラーが発生しました。');
+            } finally {
               setIsLoading(false);
-              Alert.alert(
-                '申請完了',
-                `${tutor.name}さんにマッチング申請を送信しました！\n相手の返答をお待ちください。`,
-                [{ text: 'OK', onPress: () => navigation.goBack() }],
-              );
-            }, 1200);
+            }
           },
         },
       ],
@@ -283,6 +335,95 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
           <View style={{ height: spacing.xl }} />
         </ScrollView>
       </BottomSheet>
+
+      {/* マッチング申請メッセージ入力モーダル */}
+      <Modal
+        visible={showMatchModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMatchModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowMatchModal(false)}
+          >
+            <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>マッチング申請</Text>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setShowMatchModal(false)}
+                >
+                  <MaterialIcons name="close" size={24} color={colors.gray600} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                <Text style={styles.modalLabel}>{tutor?.name}さんへのメッセージ（20文字以上）</Text>
+                <Text style={styles.modalDescription}>
+                  どのような勉強をしたいか、どのような支援を求めているかを具体的に教えてください。
+                </Text>
+                <TextInput
+                  style={[styles.messageInput, messageError ? styles.messageInputError : null]}
+                  placeholder="例：数学の微積分を基礎から教えてほしいです。特に応用問題が苦手で、解法のコツを教えていただけると嬉しいです。"
+                  placeholderTextColor={colors.gray400}
+                  value={matchMessage}
+                  onChangeText={(text) => {
+                    setMatchMessage(text);
+                    if (messageError && text.trim().length >= 20) {
+                      setMessageError('');
+                    }
+                  }}
+                  multiline
+                  numberOfLines={4}
+                  maxLength={300}
+                  textAlignVertical="top"
+                />
+                <View style={styles.messageInputFooter}>
+                  {messageError ? (
+                    <Text style={styles.modalErrorText}>{messageError}</Text>
+                  ) : (
+                    <Text style={styles.characterCount}>
+                      {matchMessage.length}/300文字 （最低20文字）
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowMatchModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>キャンセル</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.sendButton,
+                    matchMessage.trim().length < 20 ? styles.sendButtonDisabled : null,
+                  ]}
+                  onPress={handleSendMatchRequest}
+                  disabled={matchMessage.trim().length < 20}
+                >
+                  <Text
+                    style={[
+                      styles.sendButtonText,
+                      matchMessage.trim().length < 20 ? styles.sendButtonTextDisabled : null,
+                    ]}
+                  >
+                    申請する（{MATCHING_COST}コイン）
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -545,5 +686,128 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.gray100,
+  },
+  // マッチング申請モーダルのスタイル
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  modalTitle: {
+    fontSize: typography.sizes?.h3 || 20,
+    fontWeight: '600',
+    color: colors.gray900,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gray100,
+  },
+  modalBody: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  modalLabel: {
+    fontSize: typography.sizes?.body || 16,
+    fontWeight: '600',
+    color: colors.gray900,
+    marginBottom: spacing.xs,
+  },
+  modalDescription: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray600,
+    marginBottom: spacing.md,
+    lineHeight: 18,
+  },
+  messageInput: {
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    fontSize: typography.sizes?.body || 16,
+    color: colors.gray900,
+    minHeight: 100,
+    maxHeight: 120,
+  },
+  messageInputError: {
+    borderColor: colors.error,
+    borderWidth: 2,
+  },
+  messageInputFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  modalErrorText: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.error,
+  },
+  characterCount: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray500,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg + spacing.md,
+    gap: spacing.md,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    fontSize: typography.sizes?.body || 16,
+    color: colors.gray700,
+    fontWeight: '500',
+  },
+  sendButton: {
+    flex: 2,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: colors.gray300,
+  },
+  sendButtonText: {
+    fontSize: typography.sizes?.body || 16,
+    color: colors.white,
+    fontWeight: '600',
+  },
+  sendButtonTextDisabled: {
+    color: colors.gray500,
   },
 });

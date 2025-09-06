@@ -10,6 +10,12 @@ export type FilterOptions = {
   onlineOnly: boolean;
 };
 
+export type SortOption = 'recommended' | 'price_low' | 'price_high' | 'rating';
+
+export type SortOptions = {
+  sortBy: SortOption;
+};
+
 export function useTutorSearch(initial?: Partial<FilterOptions>) {
   const api = useMemo(() => getApiClient(), []);
   const [allTutors, setAllTutors] = useState<Tutor[]>([]);
@@ -22,6 +28,7 @@ export function useTutorSearch(initial?: Partial<FilterOptions>) {
     maxRate: initial?.maxRate ?? 5000,
     onlineOnly: initial?.onlineOnly ?? false,
   });
+  const [sortBy, setSortBy] = useState<SortOption>('recommended');
 
   useEffect(() => {
     let active = true;
@@ -64,8 +71,26 @@ export function useTutorSearch(initial?: Partial<FilterOptions>) {
       filtered = filtered.filter((tutor) => tutor.online_available);
     }
 
+    // 並び替え処理
+    filtered = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'price_low':
+          return a.hourly_rate - b.hourly_rate;
+        case 'price_high':
+          return b.hourly_rate - a.hourly_rate;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'recommended':
+        default:
+          // おすすめ順: 評価が高く、授業数が多い順
+          const scoreA = a.rating * 0.7 + (a.total_lessons / 100) * 0.3;
+          const scoreB = b.rating * 0.7 + (b.total_lessons / 100) * 0.3;
+          return scoreB - scoreA;
+      }
+    });
+
     setTutors(filtered);
-  }, [searchText, filters, allTutors]);
+  }, [searchText, filters, allTutors, sortBy]);
 
   return {
     allTutors,
@@ -75,5 +100,7 @@ export function useTutorSearch(initial?: Partial<FilterOptions>) {
     setSearchText,
     filters,
     setFilters,
+    sortBy,
+    setSortBy,
   } as const;
 }

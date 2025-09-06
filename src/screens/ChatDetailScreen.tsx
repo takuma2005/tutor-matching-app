@@ -36,7 +36,7 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
 
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
-  const api = getApiClient();
+  const api = React.useMemo(() => getApiClient(), []);
 
   const maxMessageLength = 1000;
   const remainingChars = maxMessageLength - inputText.length;
@@ -55,12 +55,35 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
         const found = tutorsResp.data.find((t) => t.id === tutorId);
         setTutor(found);
       }
-      if (messagesResp?.success) setMessages(messagesResp.data);
+      if (messagesResp?.success) {
+        setMessages(messagesResp.data);
+
+        // 未読メッセージを既読に更新
+        const unreadMessages = messagesResp.data.filter(
+          (msg) => msg.senderId !== profileResp.data?.id && msg.status !== 'read',
+        );
+
+        for (const message of unreadMessages) {
+          try {
+            await api.chat.updateMessageStatus(message.id, 'read');
+          } catch (error) {
+            console.warn('Failed to update message status:', error);
+          }
+        }
+
+        if (unreadMessages.length > 0) {
+          // 状態更新後のメッセージを再取得
+          const updatedMessagesResp = await api.chat.getMessages(chatRoomId, 1, 200);
+          if (updatedMessagesResp?.success && mounted) {
+            setMessages(updatedMessagesResp.data);
+          }
+        }
+      }
     })();
     return () => {
       mounted = false;
     };
-  }, [api.chat, api.student, chatRoomId, tutorId]);
+  }, [api, chatRoomId, tutorId]);
 
   useEffect(() => {
     // 画面に入ったら最新メッセージまでスクロール
@@ -142,20 +165,58 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
     } finally {
       setIsLoading(false);
     }
-  }, [api.chat, chatRoomId, currentStudent, inputText, isLoading, tutorId]);
+  }, [api, chatRoomId, currentStudent, inputText, isLoading, tutorId]);
 
   const handleLessonRequest = () => {
-    Alert.alert('授業を申請', '先輩に授業を申請しますか？日時と詳細を設定できます。', [
-      { text: 'キャンセル', style: 'cancel' },
-      {
-        text: '申請する',
-        onPress: () => {
-          // TODO: 授業申請画面への遷移
-          Alert.alert('実装予定', '授業申請機能は次のアップデートで利用可能になります。', [
-            { text: 'OK' },
-          ]);
+    navigation.navigate('LessonRequest', { tutorId, chatRoomId });
+  };
+
+  const handleReport = () => {
+    Alert.alert(
+      '通報する',
+      `${tutor?.name || 'このユーザー'}さんを通報しますか？\n\n不適切な行為や内容がある場合にご利用ください。`,
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: '通報する',
+          style: 'destructive',
+          onPress: () => {
+            // TODO: 通報機能のAPI実装
+            Alert.alert(
+              '通報完了',
+              '通報しました。運営チームが確認し、必要に応じて対応いたします。',
+            );
+          },
         },
-      },
+      ],
+    );
+  };
+
+  const handleBlock = () => {
+    Alert.alert(
+      'ブロックする',
+      `${tutor?.name || 'このユーザー'}さんをブロックしますか？\n\nブロックすると以下の制限がかかります：\n・ メッセージの送受信ができなくなる\n・ 新たなマッチングができなくなる`,
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: 'ブロックする',
+          style: 'destructive',
+          onPress: () => {
+            // TODO: ブロック機能のAPI実装
+            Alert.alert('ブロック完了', 'ユーザーをブロックしました。', [
+              { text: 'OK', onPress: () => navigation.goBack() },
+            ]);
+          },
+        },
+      ],
+    );
+  };
+
+  const handleMore = () => {
+    Alert.alert('オプション', `${tutor?.name || 'ユーザー'}さんに関する操作`, [
+      { text: 'キャンセル', style: 'cancel' },
+      { text: '通報する', onPress: handleReport },
+      { text: 'ブロックする', style: 'destructive', onPress: handleBlock },
     ]);
   };
 
@@ -304,12 +365,17 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.headerIconButton}
-          onPress={() => navigation.navigate('LessonHistory', { tutorId })}
-        >
-          <MaterialIcons name="assignment" size={20} color={colors.primary} />
-        </TouchableOpacity>
+        <View style={styles.headerRightButtons}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={() => navigation.navigate('LessonHistory', { tutorId })}
+          >
+            <MaterialIcons name="assignment" size={20} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerIconButton} onPress={handleMore}>
+            <MaterialIcons name="more-vert" size={20} color={colors.gray600} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -488,6 +554,11 @@ const styles = StyleSheet.create({
   roleText: {
     fontSize: typography.fontSizes.xs,
     color: colors.gray500,
+  },
+  headerRightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   headerIconButton: {
     width: 40,

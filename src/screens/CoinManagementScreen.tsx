@@ -249,7 +249,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={[]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* ヘッダー */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   packagesGrid: {
-    gap: spacing.md,
+    // gap is not fully supported across RN versions; use margin on children instead
   },
   packageCard: {
     backgroundColor: colors.white,
@@ -400,6 +400,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
     overflow: 'hidden',
+    marginBottom: spacing.md,
   },
   popularPackage: {
     borderColor: colors.primary,
