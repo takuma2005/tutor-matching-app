@@ -67,7 +67,6 @@ export default function TutorCard({
               <MaterialIcons name="person" size={32} color={colors.gray400} />
             </View>
           )}
-          {onlineAvailable && <View style={styles.onlineIndicator} />}
         </View>
 
         {/* 右側：情報 */}
@@ -103,6 +102,11 @@ export default function TutorCard({
               </View>
             ))}
             {subjects.length > 3 && <Text style={styles.moreSubjects}>+{subjects.length - 3}</Text>}
+            {onlineAvailable && (
+              <View style={[styles.onlineTag, { marginLeft: spacing.xs }]}>
+                <Text style={styles.onlineTagText}>オンライン授業可</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.footer}>
@@ -187,18 +191,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.success,
-    borderWidth: 2,
-    borderColor: colors.white,
-    zIndex: 2,
-    pointerEvents: 'none',
+  onlineTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.secondary + '15',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full || 999,
+    marginBottom: spacing.xs,
+  },
+  onlineTagText: {
+    fontSize: typography.fontSizes.xs,
+    color: colors.secondary,
+    fontWeight: typography.fontWeights.semibold,
   },
   infoContainer: {
     flex: 1,

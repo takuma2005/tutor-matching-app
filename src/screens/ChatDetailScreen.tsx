@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import type { StackScreenProps } from '@react-navigation/stack';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Animated,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,85 +20,48 @@ import type { ChatStackParamList } from '../navigation/ChatStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 import { getApiClient } from '@/services/api/mock';
-import type { Tutor, Student } from '@/services/api/types';
-
-type Message = {
-  id: string;
-  senderId: string;
-  text: string;
-  timestamp: Date;
-  isRead: boolean;
-};
-
+import type { Tutor, Student, Message as ApiMessage, MessageStatus } from '@/services/api/types';
+// API の Message 型を利用するためローカル定義は削除
 type Props = StackScreenProps<ChatStackParamList, 'ChatDetail'>;
 
-// モックメッセージデータ
-const mockMessages: Message[] = [
-  {
-    id: 'msg_1',
-    senderId: 'tutor_1',
-    text: 'こんにちは！数学の授業について相談したいとのことですが、どの分野でお困りでしょうか？',
-    timestamp: new Date('2024-01-15T10:00:00'),
-    isRead: true,
-  },
-  {
-    id: 'msg_2',
-    senderId: 'student_1',
-    text: '微分積分でつまずいています。特に部分積分が理解できなくて...',
-    timestamp: new Date('2024-01-15T10:05:00'),
-    isRead: true,
-  },
-  {
-    id: 'msg_3',
-    senderId: 'tutor_1',
-    text: '部分積分は確かに難しいところですね。まずは基本的な公式から確認しましょう。今度の土曜日の午後はいかがですか？',
-    timestamp: new Date('2024-01-15T10:10:00'),
-    isRead: true,
-  },
-  {
-    id: 'msg_4',
-    senderId: 'student_1',
-    text: '土曜日の午後で大丈夫です！何時頃がよろしいでしょうか？',
-    timestamp: new Date('2024-01-15T10:12:00'),
-    isRead: true,
-  },
-  {
-    id: 'msg_5',
-    senderId: 'tutor_1',
-    text: '2時からはいかがでしょうか？約2時間程度を予定しています。',
-    timestamp: new Date('2024-01-15T10:30:00'),
-    isRead: false,
-  },
-];
 
 export default function ChatDetailScreen({ route, navigation }: Props) {
-  const { tutorId } = route.params;
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
+  const { tutorId, chatRoomId } = route.params;
+  const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const inputRef = useRef<TextInput>(null);
+  const typingAnimValue = useRef(new Animated.Value(0)).current;
 
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
+  const api = getApiClient();
 
-  React.useEffect(() => {
-    const api = getApiClient();
+  const maxMessageLength = 1000;
+  const remainingChars = maxMessageLength - inputText.length;
+
+  useEffect(() => {
     let mounted = true;
-    Promise.all([
-      api.student.getProfile('student-1'),
-      api.student.searchTutors(undefined, 1, 200),
-    ]).then(([profileResp, tutorsResp]) => {
+    (async () => {
+      const [profileResp, tutorsResp, messagesResp] = await Promise.all([
+        api.student.getProfile('student-1'),
+        api.student.searchTutors(undefined, 1, 200),
+        api.chat.getMessages(chatRoomId, 1, 200),
+      ]);
       if (!mounted) return;
       if (profileResp?.success) setCurrentStudent(profileResp.data);
       if (tutorsResp?.success) {
         const found = tutorsResp.data.find((t) => t.id === tutorId);
         setTutor(found);
       }
-    });
+      if (messagesResp?.success) setMessages(messagesResp.data);
+    })();
     return () => {
       mounted = false;
     };
-  }, [tutorId]);
+  }, [api.chat, api.student, chatRoomId, tutorId]);
 
   useEffect(() => {
     // 画面に入ったら最新メッセージまでスクロール
@@ -105,40 +70,79 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
     }, 100);
   }, []);
 
-  if (!tutor) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>チャットが見つかりません</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // タイピングアニメーション
+  useEffect(() => {
+    if (isTyping) {
+      const animation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(typingAnimValue, { toValue: 1, duration: 500, useNativeDriver: true }),
+          Animated.timing(typingAnimValue, { toValue: 0, duration: 500, useNativeDriver: true }),
+        ]),
+      );
+      animation.start();
+      return () => animation.stop();
+    }
+  }, [isTyping, typingAnimValue]);
 
-  const handleSendMessage = () => {
-    if (inputText.trim() === '' || isLoading) return;
-    if (!currentStudent) return;
 
-    const newMessage: Message = {
-      id: `msg_${Date.now()}`,
+  const handleSendMessage = useCallback(async () => {
+    if (inputText.trim() === '' || isLoading || !currentStudent) return;
+    const messageText = inputText.trim();
+
+    const tempId = `temp_${Date.now()}`;
+    const optimistic: ApiMessage = {
+      id: tempId,
+      chatRoomId,
       senderId: currentStudent.id,
-      text: inputText.trim(),
+      text: messageText,
       timestamp: new Date(),
-      isRead: false,
+      status: 'sending',
     };
-
+    setMessages((prev) => [...prev, optimistic]);
+    setInputText('');
     setIsLoading(true);
 
-    // メッセージ送信シミュレート
-    setMessages((prev) => [...prev, newMessage]);
-    setInputText('');
-
-    // 送信完了後、最新メッセージまでスクロール
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
+    try {
+      const sendResp = await api.chat.sendMessage(chatRoomId, currentStudent.id, messageText);
+      if (sendResp.success) {
+        const sentMsg = sendResp.data;
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? sentMsg : m)));
+      }
+
+      setTimeout(async () => {
+        const last = sendResp.success ? sendResp.data : null;
+        if (last) {
+          await api.chat.updateMessageStatus(last.id, 'delivered');
+          setMessages((prev) => prev.map((m) => (m.id === last.id ? { ...m, status: 'delivered' } : m)));
+        }
+        if (Math.random() < 0.3 && messageText.includes('？')) {
+          setIsTyping(true);
+          const typingDuration = 2000 + Math.random() * 3000;
+          setTimeout(() => {
+            setIsTyping(false);
+            const reply: ApiMessage = {
+              id: `msg_auto_${Date.now()}`,
+              chatRoomId,
+              senderId: tutorId,
+              text: 'ありがとうございます！詳しく説明させていただきますね。',
+              timestamp: new Date(),
+              status: 'sent',
+            };
+            setMessages((prev) => [...prev, reply]);
+            setTimeout(() => {
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }, 100);
+          }, typingDuration);
+        }
+      }, 800);
+    } finally {
       setIsLoading(false);
-    }, 500);
-  };
+    }
+  }, [api.chat, chatRoomId, currentStudent, inputText, isLoading, tutorId]);
 
   const handleLessonRequest = () => {
     Alert.alert('授業を申請', '先輩に授業を申請しますか？日時と詳細を設定できます。', [
@@ -156,13 +160,49 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
   };
 
   const formatMessageTime = (timestamp: Date) => {
-    return timestamp.toLocaleTimeString('ja-JP', {
+    const d = new Date(timestamp);
+    return d.toLocaleTimeString('ja-JP', {
       hour: '2-digit',
       minute: '2-digit',
     });
   };
 
-  const renderMessage = ({ item, index }: { item: Message; index: number }) => {
+  const getMessageStatusIcon = (status: MessageStatus) => {
+    switch (status) {
+      case 'sending':
+        return <MaterialIcons name="access-time" size={12} color={colors.gray400} />;
+      case 'sent':
+        return <MaterialIcons name="done" size={12} color={colors.gray400} />;
+      case 'delivered':
+        return <MaterialIcons name="done-all" size={12} color={colors.gray400} />;
+      case 'read':
+        return <MaterialIcons name="done-all" size={12} color={colors.primary} />;
+      default:
+        return null;
+    }
+  };
+
+  // 先輩/後輩 判定（簡易）
+  const getRelationLabel = (t?: Tutor, s?: Student | null) => {
+    if (!t || !s) return '';
+    const level = (v?: string) => {
+      const str = v || '';
+      if (str.includes('博士')) return 5;
+      if (str.includes('修士') || str.includes('院')) return 4;
+      if (str.includes('大学')) return 3;
+      if (str.includes('高校')) return 2;
+      if (str.includes('中学')) return 1;
+      return 0;
+    };
+    const tutorLevel = Math.max(level(t.grade), level(t.school));
+    const studentLevel = Math.max(level(s.grade), level(s.school));
+    if (tutorLevel > studentLevel) return '先輩';
+    if (tutorLevel < studentLevel) return '後輩';
+    return '同級生';
+  };
+  const relationLabel = getRelationLabel(tutor, currentStudent);
+
+  const renderMessage = ({ item, index }: { item: ApiMessage; index: number }) => {
     const isOwnMessage = item.senderId === (currentStudent?.id ?? '');
     const showTimestamp =
       index === 0 ||
@@ -182,20 +222,57 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
           >
             {item.text}
           </Text>
-          {showTimestamp && (
-            <Text
-              style={[
-                styles.messageTime,
-                isOwnMessage ? styles.ownMessageTime : styles.otherMessageTime,
-              ]}
-            >
-              {formatMessageTime(item.timestamp)}
-            </Text>
-          )}
+          <View style={styles.messageFooter}>
+            {showTimestamp && (
+              <Text
+                style={[
+                  styles.messageTime,
+                  isOwnMessage ? styles.ownMessageTime : styles.otherMessageTime,
+                ]}
+              >
+                {formatMessageTime(item.timestamp)}
+              </Text>
+            )}
+            {isOwnMessage && <View style={styles.messageStatus}>{getMessageStatusIcon(item.status)}</View>}
+          </View>
         </View>
       </View>
     );
   };
+
+  const renderTypingIndicator = () => {
+    if (!isTyping) return null;
+    return (
+      <View style={styles.typingContainer}>
+        <View style={styles.typingBubble}>
+          <Animated.View style={[styles.typingDot, { opacity: typingAnimValue }]} />
+          <Animated.View
+            style={[
+              styles.typingDot,
+              { opacity: typingAnimValue.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.typingDot,
+              { opacity: typingAnimValue.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) },
+            ]}
+          />
+        </View>
+        <Text style={styles.typingText}>{tutor?.name}が入力中...</Text>
+      </View>
+    );
+  };
+
+  if (!tutor) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>チャットが見つかりません</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -208,20 +285,24 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
         <View style={styles.headerCenter}>
           <View style={styles.tutorInfo}>
             <View style={styles.headerAvatar}>
-              <MaterialIcons name="person" size={20} color={colors.gray400} />
-              {tutor.online_available && <View style={styles.onlineIndicator} />}
+              {tutor.avatar_url ? (
+                <Image source={{ uri: tutor.avatar_url }} style={styles.headerAvatarImage} />
+              ) : (
+                <MaterialIcons name="person" size={20} color={colors.gray400} />
+              )}
             </View>
             <View style={styles.tutorDetails}>
               <Text style={styles.tutorName}>{tutor.name}</Text>
-              <Text style={styles.tutorStatus}>
-                {tutor.online_available ? 'オンライン' : '最終ログイン: 2時間前'}
-              </Text>
+              {!!relationLabel && <Text style={styles.roleText}>{relationLabel}</Text>}
             </View>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.lessonButton} onPress={handleLessonRequest}>
-          <MaterialIcons name="school" size={24} color={colors.primary} />
+        <TouchableOpacity 
+          style={styles.headerIconButton} 
+          onPress={() => navigation.navigate('LessonHistory', { tutorId })}
+        >
+          <MaterialIcons name="assignment" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -239,35 +320,94 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          onContentSizeChange={() => {
+            if (!isLoading) setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+          }}
         />
+
+        {/* タイピングインジケーター */}
+        {renderTypingIndicator()}
+
+        {/* 授業の申請カード */}
+        <View style={styles.lessonRequestCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
+              <View style={styles.cardIconContainer}>
+                <MaterialIcons name="school" size={18} color={colors.primary} />
+              </View>
+              <Text style={styles.cardHeaderText}>授業リクエスト</Text>
+            </View>
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusBadgeText}>承認待ち</Text>
+            </View>
+          </View>
+          
+          <View style={styles.cardContent}>
+            <View style={styles.cardInfoRow}>
+              <MaterialIcons name="event" size={16} color={colors.gray500} />
+              <Text style={styles.cardInfoText}>12月15日(日) 15:00-16:00</Text>
+            </View>
+            <View style={styles.cardInfoRow}>
+              <MaterialIcons name="subject" size={16} color={colors.gray500} />
+              <Text style={styles.cardInfoText}>微分積分（極限・εδ論法）</Text>
+            </View>
+            <View style={styles.cardInfoRow}>
+              <MaterialIcons name="monetization-on" size={16} color={colors.gray500} />
+              <Text style={styles.cardInfoText}>1,800コイン</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 下部CTA：授業を申請する */}
+        <View style={styles.ctaContainer}>
+          <TouchableOpacity style={styles.ctaButton} onPress={handleLessonRequest} activeOpacity={0.8}>
+            <MaterialIcons name="add" size={20} color={colors.white} style={styles.ctaIcon} />
+            <Text style={styles.ctaButtonText}>新しい授業を申請</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* 入力エリア */}
         <View style={styles.inputContainer}>
+          {remainingChars <= 50 && (
+            <View style={styles.charCountContainer}>
+              <Text style={[styles.charCount, remainingChars <= 0 && styles.charCountError]}>
+                {remainingChars}
+              </Text>
+            </View>
+          )}
           <View style={styles.inputRow}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="メッセージを入力..."
-              placeholderTextColor={colors.gray400}
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              maxLength={1000}
-              editable={!isLoading}
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                ref={inputRef}
+                style={[
+                  styles.textInput,
+                  inputText.length > 200 && styles.textInputExpanded
+                ]}
+                placeholder="メッセージを入力..."
+                placeholderTextColor={colors.gray400}
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+                maxLength={maxMessageLength}
+                editable={!isLoading}
+                textAlignVertical="top"
+                returnKeyType="send"
+                onSubmitEditing={handleSendMessage}
+                blurOnSubmit={false}
+              />
+            </View>
             <TouchableOpacity
-              style={[
-                styles.sendButton,
-                (inputText.trim() === '' || isLoading) && styles.sendButtonDisabled,
-              ]}
+              style={[styles.sendButton, (inputText.trim() === '' || isLoading) && styles.sendButtonDisabled]}
               onPress={handleSendMessage}
               disabled={inputText.trim() === '' || isLoading}
+              activeOpacity={0.7}
+              accessibilityLabel="メッセージを送信"
             >
-              <MaterialIcons
-                name="send"
-                size={20}
-                color={inputText.trim() === '' || isLoading ? colors.gray400 : colors.white}
-              />
+              {isLoading ? (
+                <MaterialIcons name="hourglass-empty" size={20} color={colors.white} />
+              ) : (
+                <MaterialIcons name="send" size={20} color={colors.white} />
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -315,17 +455,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacing.sm,
     position: 'relative',
+    overflow: 'hidden',
+  },
+  headerAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   onlineIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.success,
-    borderWidth: 2,
-    borderColor: colors.white,
+    // removed; replaced by onlineTag
   },
   tutorDetails: {
     flex: 1,
@@ -336,11 +474,11 @@ const styles = StyleSheet.create({
     color: colors.gray900,
     marginBottom: 2,
   },
-  tutorStatus: {
+  roleText: {
     fontSize: typography.fontSizes.xs,
     color: colors.gray500,
   },
-  lessonButton: {
+  headerIconButton: {
     width: 40,
     height: 40,
     borderRadius: borderRadius.md,
@@ -394,6 +532,12 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSizes.md,
     lineHeight: typography.lineHeights.normal * typography.fontSizes.md,
   },
+  messageFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.xs / 2,
+  },
   ownMessageText: {
     color: colors.white,
   },
@@ -411,38 +555,191 @@ const styles = StyleSheet.create({
   otherMessageTime: {
     color: colors.gray500,
   },
+  messageStatus: {
+    marginLeft: spacing.xs / 2,
+  },
+  typingContainer: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.gray50,
+  },
+  typingBubble: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.sm,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray200,
+  },
+  typingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.gray400,
+    marginHorizontal: 1,
+  },
+  typingText: {
+    fontSize: typography.fontSizes.xs,
+    color: colors.gray500,
+    marginTop: spacing.xs / 2,
+    fontStyle: 'italic',
+  },
   inputContainer: {
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
     padding: spacing.md,
   },
+  lessonRequestCard: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl || 16,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  cardIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  cardHeaderText: {
+    fontSize: typography.fontSizes.md,
+    fontWeight: typography.fontWeights.semibold,
+    color: colors.gray900,
+    flex: 1,
+  },
+  statusBadge: {
+    backgroundColor: colors.warning + '20',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full || 12,
+  },
+  statusBadgeText: {
+    fontSize: typography.fontSizes.xs,
+    fontWeight: typography.fontWeights.medium,
+    color: colors.warning,
+  },
+  cardContent: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  cardInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  cardInfoText: {
+    fontSize: typography.fontSizes.sm,
+    color: colors.gray700,
+    marginLeft: spacing.sm,
+    flex: 1,
+  },
+  ctaContainer: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  ctaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  ctaIcon: {
+    marginRight: spacing.xs,
+  },
+  ctaButtonText: {
+    color: colors.white,
+    fontWeight: typography.fontWeights.semibold,
+    fontSize: typography.fontSizes.md,
+  },
+  charCountContainer: {
+    alignItems: 'flex-end',
+    marginBottom: spacing.xs / 2,
+  },
+  charCount: {
+    fontSize: typography.fontSizes.xs,
+    color: colors.gray500,
+  },
+  charCountError: {
+    color: colors.error,
+    fontWeight: typography.fontWeights.semibold,
+  },
   inputRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
   },
-  textInput: {
+  inputWrapper: {
     flex: 1,
     backgroundColor: colors.gray100,
     borderRadius: borderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.gray200,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: 0,
     marginRight: spacing.sm,
+    height: 48,
+    justifyContent: 'center',
+  },
+  textInput: {
     fontSize: typography.fontSizes.md,
     color: colors.gray900,
-    maxHeight: 100,
-    minHeight: 40,
+    height: '100%',
+    lineHeight: typography.lineHeights.normal * typography.fontSizes.md,
     textAlignVertical: 'center',
+    paddingTop: Platform.OS === 'ios' ? 10 : 0,
+    paddingBottom: Platform.OS === 'ios' ? 14 : 0,
+  },
+  textInputExpanded: {
+    maxHeight: 150,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   sendButtonDisabled: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray400,
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });

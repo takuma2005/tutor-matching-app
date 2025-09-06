@@ -1,72 +1,17 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 import { getApiClient } from '@/services/api/mock';
-import type { Student, Tutor } from '@/services/api/types';
+import type { Student, Tutor, ChatRoom, Message, MessageStatus } from '@/services/api/types';
+// ルーム・メッセージの型は API の型を使用するためローカル定義は削除
 
-type Message = {
-  id: string;
-  senderId: string;
-  text: string;
-  timestamp: Date;
-  isRead: boolean;
-};
-
-type ChatRoom = {
-  id: string;
-  tutorId: string;
-  studentId: string;
-  lastMessage?: Message;
-  updatedAt: Date;
-};
-
-// モックチャットルームデータ
-const mockChatRooms: ChatRoom[] = [
-  {
-    id: '1',
-    tutorId: 'tutor_1',
-    studentId: 'student_1',
-    lastMessage: {
-      id: 'msg_1',
-      senderId: 'tutor_1',
-      text: 'こんにちは！数学の授業、明日の3時からでいかがでしょうか？',
-      timestamp: new Date('2024-01-15T10:30:00'),
-      isRead: false,
-    },
-    updatedAt: new Date('2024-01-15T10:30:00'),
-  },
-  {
-    id: '2',
-    tutorId: 'tutor_2',
-    studentId: 'student_1',
-    lastMessage: {
-      id: 'msg_2',
-      senderId: 'student_1',
-      text: '英語の文法でわからないところがあります。教えていただけますか？',
-      timestamp: new Date('2024-01-14T15:45:00'),
-      isRead: true,
-    },
-    updatedAt: new Date('2024-01-14T15:45:00'),
-  },
-  {
-    id: '3',
-    tutorId: 'tutor_3',
-    studentId: 'student_1',
-    lastMessage: {
-      id: 'msg_3',
-      senderId: 'tutor_3',
-      text: 'お疲れさまでした！今日の授業、いかがでしたか？',
-      timestamp: new Date('2024-01-13T18:20:00'),
-      isRead: true,
-    },
-    updatedAt: new Date('2024-01-13T18:20:00'),
-  },
-];
+// モックチャットルームデータは不使用。APIから取得します。
 
 // ナビゲーション用の型定義
 type ChatStackParamList = {
@@ -84,25 +29,56 @@ type Props = {
 };
 
 export default function ChatScreen({ navigation }: Props) {
-  const [chatRooms] = useState<ChatRoom[]>(mockChatRooms);
+  const [chatRooms, setChatRooms] = useState<(ChatRoom & { lastMessage?: Message })[]>([]);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  React.useEffect(() => {
-    const api = getApiClient();
+  const api = getApiClient();
+
+  const loadChatRooms = useCallback(async (studentId: string) => {
+    const resp = await api.chat.getChatRooms(studentId);
+    if (resp.success) {
+      const rooms = resp.data.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      setChatRooms(rooms);
+    }
+  }, [api.chat]);
+
+  useEffect(() => {
     let mounted = true;
     Promise.all([
       api.student.getProfile('student-1'),
       api.student.searchTutors(undefined, 1, 200),
-    ]).then(([profileResp, tutorsResp]) => {
+    ]).then(async ([profileResp, tutorsResp]) => {
       if (!mounted) return;
-      if (profileResp?.success) setCurrentStudent(profileResp.data);
+      if (profileResp?.success) {
+        setCurrentStudent(profileResp.data);
+        await loadChatRooms(profileResp.data.id);
+      }
       if (tutorsResp?.success) setTutors(tutorsResp.data);
     });
     return () => {
       mounted = false;
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     };
-  }, []);
+  }, [api.student, loadChatRooms]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (currentStudent) loadChatRooms(currentStudent.id);
+    }, [currentStudent, loadChatRooms])
+  );
+
+  const handleRefresh = useCallback(() => {
+    if (!currentStudent) return;
+    setIsRefreshing(true);
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(async () => {
+      await loadChatRooms(currentStudent.id);
+      setIsRefreshing(false);
+    }, 800);
+  }, [currentStudent, loadChatRooms]);
 
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -120,49 +96,69 @@ export default function ChatScreen({ navigation }: Props) {
     }
   };
 
-  const renderChatRoom = ({ item }: { item: ChatRoom }) => {
+  const getMessageStatusIcon = (status: MessageStatus, isOwnMessage: boolean) => {
+    if (!isOwnMessage) return null;
+    switch (status) {
+      case 'sending':
+        return <MaterialIcons name="access-time" size={12} color={colors.gray400} />;
+      case 'sent':
+        return <MaterialIcons name="done" size={12} color={colors.gray400} />;
+      case 'delivered':
+        return <MaterialIcons name="done-all" size={12} color={colors.gray400} />;
+      case 'read':
+        return <MaterialIcons name="done-all" size={12} color={colors.primary} />;
+      default:
+        return null;
+    }
+  };
+
+  const renderChatRoom = ({ item }: { item: ChatRoom & { lastMessage?: Message } }) => {
     const tutor = tutors.find((t) => t.id === item.tutorId);
     if (!tutor) return null;
 
-    const isUnread =
-      item.lastMessage &&
-      !item.lastMessage.isRead &&
-      item.lastMessage.senderId !== (currentStudent?.id ?? '');
+    const last = item.lastMessage;
+    const isOwnMessage = last?.senderId === (currentStudent?.id ?? '');
+    const hasNewMessage = !!last && !isOwnMessage && last.status !== 'read';
 
     return (
       <TouchableOpacity
-        style={styles.chatRoomItem}
+        style={[styles.chatRoomItem, hasNewMessage && styles.chatRoomItemUnread]}
         onPress={() => {
           navigation.navigate('ChatDetail', {
             chatRoomId: item.id,
             tutorId: item.tutorId,
           });
         }}
+        activeOpacity={0.7}
       >
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <MaterialIcons name="person" size={24} color={colors.gray400} />
-          </View>
-          {tutor.online_available && <View style={styles.onlineIndicator} />}
+          {tutor.avatar_url ? (
+            <Image source={{ uri: tutor.avatar_url }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <MaterialIcons name="person" size={24} color={colors.gray400} />
+            </View>
+          )}
         </View>
 
         <View style={styles.chatInfo}>
           <View style={styles.chatHeader}>
-            <Text style={styles.tutorName}>{tutor.name}</Text>
-            <Text style={styles.timestamp}>
-              {item.lastMessage ? formatTime(item.lastMessage.timestamp) : ''}
+            <Text style={[styles.tutorName, hasNewMessage && styles.tutorNameUnread]}>
+              {tutor.name}
             </Text>
+            <View style={styles.timestampContainer}>
+              <Text style={[styles.timestamp, hasNewMessage && styles.timestampUnread]}>
+                {last ? formatTime(new Date(last.timestamp)) : ''}
+              </Text>
+              {last && getMessageStatusIcon(last.status, isOwnMessage)}
+            </View>
           </View>
 
           <View style={styles.messageRow}>
-            <Text style={[styles.lastMessage, isUnread && styles.unreadMessage]} numberOfLines={2}>
-              {item.lastMessage?.text || 'メッセージなし'}
+            <Text style={[styles.lastMessage, hasNewMessage && styles.lastMessageUnread]} numberOfLines={2}>
+              {last ? (last.text.length <= 60 ? last.text : last.text.slice(0, 60) + '...') : 'メッセージなし'}
             </Text>
-            {isUnread && (
-              <View style={styles.unreadBadge}>
-                <Text style={styles.unreadBadgeText}>NEW</Text>
-              </View>
-            )}
+            {hasNewMessage && <View style={styles.newMessageDot} />}
           </View>
         </View>
       </TouchableOpacity>
@@ -182,11 +178,19 @@ export default function ChatScreen({ navigation }: Props) {
       {/* チャットリスト */}
       {chatRooms.length > 0 ? (
         <FlatList
-          data={chatRooms.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())}
+          data={chatRooms}
           renderItem={renderChatRoom}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
         />
       ) : (
         <View style={styles.emptyContainer}>
@@ -203,6 +207,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white,
+  },
+  chatRoomItemUnread: {
+    backgroundColor: colors.primary + '05',
+    borderBottomColor: colors.primary + '10',
   },
   header: {
     flexDirection: 'row',
@@ -248,16 +256,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.gray200,
+  },
   onlineIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.success,
-    borderWidth: 2,
-    borderColor: colors.white,
+    // removed; replaced by onlineTagSmall
   },
   chatInfo: {
     flex: 1,
@@ -273,9 +279,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.gray900,
   },
+  tutorNameUnread: {
+    color: colors.gray900,
+    fontWeight: '700',
+  },
   timestamp: {
     fontSize: typography.sizes?.caption || 12,
     color: colors.gray500,
+  },
+  timestampContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+  },
+  timestampUnread: {
+    color: colors.primary,
+    fontWeight: '600',
   },
   messageRow: {
     flexDirection: 'row',
@@ -288,21 +307,17 @@ const styles = StyleSheet.create({
     color: colors.gray600,
     lineHeight: 18,
   },
-  unreadMessage: {
+  lastMessageUnread: {
     color: colors.gray900,
     fontWeight: '500',
   },
-  unreadBadge: {
+  newMessageDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: borderRadius.full || 999,
     marginLeft: spacing.sm,
-  },
-  unreadBadgeText: {
-    fontSize: 10,
-    color: colors.white,
-    fontWeight: '700',
+    marginTop: 2,
   },
   emptyContainer: {
     flex: 1,

@@ -139,6 +139,11 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
           <Text style={styles.subjectTagText}>{subject}</Text>
         </View>
       ))}
+      {tutor.online_available && (
+        <View style={styles.onlineTag}>
+          <Text style={styles.onlineTagText}>オンライン授業可</Text>
+        </View>
+      )}
     </View>
   );
 
@@ -173,13 +178,6 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
               </View>
             )}
 
-            {/* オンライン状態 */}
-            {tutor.online_available && (
-              <View style={styles.onlineBadge}>
-                <View style={styles.onlineDot} />
-                <Text style={styles.onlineText}>オンライン</Text>
-              </View>
-            )}
           </View>
 
           <View style={styles.profileInfo}>
@@ -362,26 +360,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  onlineBadge: {
-    flexDirection: 'row',
+  onlineTag: {
     alignItems: 'center',
-    backgroundColor: colors.success,
+    backgroundColor: colors.secondary + '15',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs / 2,
     borderRadius: borderRadius.full || 999,
-    marginTop: spacing.sm,
   },
-  onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.white,
-    marginRight: spacing.xs / 2,
-  },
-  onlineText: {
+  onlineTagText: {
     fontSize: typography.sizes?.caption || 12,
-    color: colors.white,
-    fontWeight: '500',
+    color: colors.secondary,
+    fontWeight: '600',
   },
   profileInfo: {
     alignItems: 'center',

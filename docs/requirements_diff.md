@@ -214,6 +214,36 @@
   - 未使用ファイル削除: src/screens/TutorDetailSheet.tsx, src/components/common/BottomSheet.tsx
   - 未使用インポート削除: CoinManagementScreen の FlatList など
 
+### 2025-09-06（チャット/授業履歴/タグ・アバター/仕様追記）
+
+- オンライン表示ポリシー
+  - チャット（一覧/詳細）ではオンライン表示（ドット/タグ）を行わない
+  - TutorCard / TutorDetail では「オンライン授業可」をタグ表示し、科目タグ列の末尾（右隣）に配置
+  - デザイン: 背景=secondary+15, 文字=secondary, ピル形
+
+- アバター（人物画像）
+  - ChatScreen / ChatDetail / LessonScreen / LessonHistoryScreen / MyPageScreen で人物画像を使用
+  - Tutor: avatar_url を使用（なければ人アイコン）
+  - MyPage: user.avatar を優先、無ければ user.avatar_url も許容
+  - モックを拡充（student-2, tutor-7, tutor-8追加。既存のプレースホルダ画像を人物写真へ差替え）
+
+- チャット詳細（ChatDetailScreen）
+  - 右上の電話ボタンを削除し、授業履歴画面への遷移ボタンを追加
+  - 講師名の直下に「先輩 / 後輩 / 同級生」を表示（学校/学年から簡易推定）
+  - 入力欄と送信ボタンの高さを48pxで揃え、iOSのプレースホルダ縦位置を中央に調整
+
+- 授業履歴（LessonHistoryScreen）
+  - 新規作成。LessonScreen と同じUI/タブ（今後/履歴）構成
+  - 講師のアバター（丸 40px）を表示
+
+- 授業（LessonScreen）
+  - 「完了にする」に確認ダイアログを追加
+  - ステータスバッジの色/透明度を調整（pending=secondary、背景透過15）
+
+- モック/不具合修正
+  - チャットモックID（tutorId/senderId）の不整合を修正し、一覧に表示
+  - フック順序エラーを解消（早期returnの位置をフック定義後へ）
+
 ---
 
 対応方針（提案）

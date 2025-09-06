@@ -1,6 +1,6 @@
 import type { CoinGateway, ChargeReason } from './types';
 
-import { mockCoinService, mockStudentService } from '@/services/api/mock';
+import { mockCoinService } from '@/services/api/mock';
 import type { CoinTransaction } from '@/services/api/types';
 
 export class MockCoinGateway implements CoinGateway {
@@ -21,18 +21,15 @@ export class MockCoinGateway implements CoinGateway {
     reason: ChargeReason,
     description?: string,
   ): Promise<void> {
-    // Use test helper to add a synthetic transaction and update mock balance
+    // Map to unified transaction types: purchase | spend | refund
+    const txType: CoinTransaction['type'] = amount >= 0
+      ? (reason === 'purchase' ? 'purchase' : 'refund')
+      : 'spend';
+
     await mockCoinService.addMockTransaction({
       user_id: userId,
       amount,
-      type:
-        reason === 'purchase'
-          ? 'purchase'
-          : reason === 'bonus'
-            ? 'bonus'
-            : reason === 'lesson' || reason === 'matching'
-              ? 'lesson'
-              : 'purchase', // fallback
+      type: txType,
       description: description ?? this.defaultDescription(amount, reason),
       stripe_payment_intent_id: undefined as any,
     });
@@ -45,10 +42,11 @@ export class MockCoinGateway implements CoinGateway {
   }
 
   private defaultDescription(amount: number, reason: ChargeReason) {
-    if (reason === 'purchase') return `コイン購入 (${amount}コイン)`;
-    if (reason === 'bonus') return `ボーナス付与 (+${amount}コイン)`;
-    if (reason === 'lesson') return `授業支払い (${amount}コイン)`;
-    if (reason === 'matching') return `マッチング申請 (${amount}コイン)`;
-    return `調整 (${amount}コイン)`;
+    const abs = Math.abs(amount);
+    if (reason === 'purchase') return `コイン購入 (+${abs}コイン)`;
+    if (reason === 'bonus') return `ボーナス付与 (+${abs}コイン)`;
+    if (reason === 'lesson') return `授業支払い (-${abs}コイン)`;
+    if (reason === 'matching') return `マッチング申請 (-${abs}コイン)`;
+    return `${amount >= 0 ? '返金/調整' : '支出/調整'} (${amount >= 0 ? '+' : '-'}${abs}コイン)`;
   }
 }

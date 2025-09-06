@@ -3,12 +3,14 @@
 import { mockAuthService } from './authService';
 import { mockCoinService } from './coinService';
 import { mockStudentService } from './studentService';
+import { mockChatService } from './chatService';
 
 // すべてのモックサービスを統合したAPIクライアント
 export const mockApiClient = {
   auth: mockAuthService,
   student: mockStudentService,
   coin: mockCoinService,
+  chat: mockChatService,
 };
 
 // 個別エクスポート
@@ -77,6 +79,20 @@ const prodApiClient = {
       data: [],
       pagination: { page: 1, limit: 0, total: 0, has_more: false },
     }),
+  },
+  chat: {
+    getChatRooms: async (_studentId: string) => ({ success: true, data: [] }),
+    getMessages: async (_chatRoomId: string, _page?: number, _limit?: number) => ({
+      success: true,
+      data: [],
+      pagination: { page: 1, limit: 0, total: 0, has_more: false },
+    }),
+    sendMessage: async (_chatRoomId: string, _senderId: string, _text: string) =>
+      notImplemented('chat.sendMessage'),
+    updateMessageStatus: async (_messageId: string, _status: string) =>
+      notImplemented('chat.updateMessageStatus'),
+    createChatRoom: async (_tutorId: string, _studentId: string) =>
+      notImplemented('chat.createChatRoom'),
   },
 };
 

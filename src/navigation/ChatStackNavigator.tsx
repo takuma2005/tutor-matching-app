@@ -3,11 +3,15 @@ import React from 'react';
 
 import ChatDetailScreen from '../screens/ChatDetailScreen';
 import ChatScreen from '../screens/ChatScreen';
+import LessonHistoryScreen from '../screens/LessonHistoryScreen';
 
 export type ChatStackParamList = {
   ChatMain: undefined;
   ChatDetail: {
     chatRoomId: string;
+    tutorId: string;
+  };
+  LessonHistory: {
     tutorId: string;
   };
 };
@@ -24,6 +28,7 @@ export default function ChatStackNavigator() {
     >
       <Stack.Screen name="ChatMain" component={ChatScreen} />
       <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
+      <Stack.Screen name="LessonHistory" component={LessonHistoryScreen} />
     </Stack.Navigator>
   );
 }

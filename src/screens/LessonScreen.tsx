@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
@@ -24,10 +24,14 @@ type Lesson = {
 
 // サービスから取得するため、ローカルモックは削除
 
+import { useUser } from '@/contexts/UserContext';
+import { CoinManager } from '@/domain/coin/coinManager';
+
 export default function LessonScreen() {
   const [selectedTab, setSelectedTab] = useState<'upcoming' | 'completed'>('upcoming');
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const { user } = useUser();
 
   React.useEffect(() => {
     const api = getApiClient();
@@ -65,20 +69,46 @@ export default function LessonScreen() {
   }, []);
 
   const now = Date.now();
-  const upcomingLessons = lessons.filter(
-    (lesson) =>
-      (lesson.status === 'pending' || lesson.status === 'confirmed') &&
-      lesson.scheduledAt.getTime() >= now,
-  );
+  const upcomingLessons = useMemo(() => {
+    return lessons.filter((lesson) => {
+      const t = lesson.scheduledAt.getTime();
+      const isFuture = t >= now;
+      const isUpcomingStatus =
+        lesson.status === 'pending' || lesson.status === 'confirmed' || lesson.status === 'in-progress';
+      return isUpcomingStatus && (isFuture || lesson.status === 'in-progress');
+    });
+  }, [lessons, now]);
 
-  const completedLessons = lessons.filter((lesson) => lesson.status === 'completed');
+  const historyLessons = useMemo(() => {
+    return lessons.filter((lesson) => {
+      const t = lesson.scheduledAt.getTime();
+      const isPast = t < now;
+      const isHistoryStatus = lesson.status === 'completed' || lesson.status === 'cancelled';
+      return isHistoryStatus || isPast;
+    });
+  }, [lessons, now]);
+
+  // 表示対象（チューターが見つかるものだけ）
+  const visibleUpcomingLessons = useMemo(() => {
+    if (tutors.length === 0) return upcomingLessons;
+    const tutorIds = new Set(tutors.map((t) => t.id));
+    return upcomingLessons.filter((l) => tutorIds.has(l.tutorId));
+  }, [upcomingLessons, tutors]);
+
+  const visibleHistoryLessons = useMemo(() => {
+    if (tutors.length === 0) return historyLessons;
+    const tutorIds = new Set(tutors.map((t) => t.id));
+    return historyLessons.filter((l) => tutorIds.has(l.tutorId));
+  }, [historyLessons, tutors]);
 
   const getStatusColor = (status: LessonStatus) => {
     switch (status) {
       case 'pending':
-        return colors.warning;
+        return colors.secondary; // 予定（ペンディング）はセカンダリ系に
       case 'confirmed':
-        return colors.success;
+        return colors.primary;
+      case 'in-progress':
+        return colors.primary;
       case 'completed':
         return colors.primary;
       case 'cancelled':
@@ -114,15 +144,19 @@ export default function LessonScreen() {
   };
 
   const renderLessonItem = ({ item }: { item: Lesson }) => {
-    const tutor = tutors.find((t) => t.id === item.tutorId);
-    if (!tutor) return null;
+    // tutors フィルタ済みのため、ここでは常に存在する前提
+    const tutor = tutors.find((t) => t.id === item.tutorId) as Tutor;
 
     return (
       <TouchableOpacity style={styles.lessonCard}>
         <View style={styles.lessonHeader}>
           <View style={styles.tutorInfo}>
             <View style={styles.tutorAvatar}>
-              <MaterialIcons name="person" size={20} color={colors.gray400} />
+              {tutor.avatar_url ? (
+                <Image source={{ uri: tutor.avatar_url }} style={styles.tutorAvatarImage} />
+              ) : (
+                <MaterialIcons name="person" size={20} color={colors.gray400} />
+              )}
             </View>
             <View style={styles.tutorDetails}>
               <Text style={styles.tutorName}>{tutor.name}</Text>
@@ -130,7 +164,7 @@ export default function LessonScreen() {
             </View>
           </View>
           <View
-            style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}
+            style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '15' }]}
           >
             <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
               {getStatusText(item.status)}
@@ -158,9 +192,62 @@ export default function LessonScreen() {
         </View>
 
         {item.status === 'confirmed' && (
-          <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.completeButton}>
+          <View style={styles.actionButtonsRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.completeButton]}
+              onPress={() => {
+                Alert.alert(
+                  '完了確認',
+                  'この授業を完了し、送金を確定しますか？',
+                  [
+                    { text: '戻る', style: 'cancel' },
+                    {
+                      text: '完了にする',
+                      style: 'default',
+                      onPress: () => {
+                        // 課金確定（モック）: 既に予約時に減算済みのため、状態のみ更新
+                        setLessons((prev) =>
+                          prev.map((l) => (l.id === item.id ? { ...l, status: 'completed' } : l)),
+                        );
+                        Alert.alert('完了しました', '授業が完了し、送金が確定しました。');
+                      },
+                    },
+                  ],
+                );
+              }}
+            >
               <Text style={styles.completeButtonText}>完了にする</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.cancelButton]}
+              onPress={() => {
+                if (!user) return;
+                const hoursUntil = (item.scheduledAt.getTime() - Date.now()) / (1000 * 60 * 60);
+                if (hoursUntil < 12) {
+                  Alert.alert('キャンセル不可', '開始12時間前を過ぎているため、キャンセルできません。');
+                  return;
+                }
+                Alert.alert(
+                  'キャンセル確認',
+                  `この授業をキャンセルし、${item.price.toLocaleString()}コインを返金しますか？`,
+                  [
+                    { text: '戻る', style: 'cancel' },
+                    {
+                      text: 'キャンセルする',
+                      style: 'destructive',
+                      onPress: () => {
+                        CoinManager.applyDelta(user.id, item.price, 'adjust', '授業キャンセル返金');
+                        setLessons((prev) =>
+                          prev.map((l) => (l.id === item.id ? { ...l, status: 'cancelled' } : l)),
+                        );
+                        Alert.alert('キャンセル完了', '返金処理が完了しました。');
+                      },
+                    },
+                  ],
+                );
+              }}
+            >
+              <Text style={styles.completeButtonText}>キャンセル</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -182,7 +269,7 @@ export default function LessonScreen() {
           onPress={() => setSelectedTab('upcoming')}
         >
           <Text style={[styles.tabText, selectedTab === 'upcoming' && styles.activeTabText]}>
-            予定 ({upcomingLessons.length})
+            予定 ({visibleUpcomingLessons.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -190,14 +277,14 @@ export default function LessonScreen() {
           onPress={() => setSelectedTab('completed')}
         >
           <Text style={[styles.tabText, selectedTab === 'completed' && styles.activeTabText]}>
-            履歴 ({completedLessons.length})
+            履歴 ({visibleHistoryLessons.length})
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* 授業リスト */}
       <FlatList
-        data={selectedTab === 'upcoming' ? upcomingLessons : completedLessons}
+        data={selectedTab === 'upcoming' ? visibleUpcomingLessons : visibleHistoryLessons}
         renderItem={renderLessonItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
@@ -314,6 +401,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
+    overflow: 'hidden',
+  },
+  tutorAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   tutorDetails: {
     flex: 1,
@@ -358,12 +451,25 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     marginTop: spacing.sm,
   },
-  completeButton: {
-    backgroundColor: colors.success,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
+  actionButtonsRow: {
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+    paddingTop: spacing.md,
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
     alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  completeButton: {
+    backgroundColor: colors.primary,
+  },
+  cancelButton: {
+    backgroundColor: colors.gray600,
   },
   completeButtonText: {
     fontSize: typography.fontSizes.sm || 14,

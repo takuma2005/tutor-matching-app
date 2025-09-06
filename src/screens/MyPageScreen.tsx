@@ -3,7 +3,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useUser } from '../contexts/UserContext';
@@ -35,9 +35,17 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
       <View style={styles.profileCard} testID="profile-card">
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar} testID="profile-avatar">
-              <MaterialIcons name="person" size={30} color={colors.gray400} />
-            </View>
+            {user?.avatar || (user as any)?.avatar_url ? (
+              <Image
+                source={{ uri: (user?.avatar || (user as any)?.avatar_url) as string }}
+                style={styles.avatarImage}
+                testID="profile-avatar"
+              />
+            ) : (
+              <View style={styles.avatar} testID="profile-avatar">
+                <MaterialIcons name="person" size={30} color={colors.gray400} />
+              </View>
+            )}
           </View>
 
           <View style={styles.profileInfo}>
@@ -150,6 +158,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.gray200,
   },
   profileInfo: {
     flex: 1,

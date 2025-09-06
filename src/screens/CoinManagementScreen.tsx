@@ -117,10 +117,9 @@ export default function CoinManagementScreen({ navigation }: Props) {
     switch (type) {
       case 'purchase':
         return 'add-circle';
-      case 'matching':
-      case 'lesson':
+      case 'spend':
         return 'remove-circle';
-      case 'bonus':
+      case 'refund':
         return 'card-giftcard';
       default:
         return 'monetization-on';
@@ -130,10 +129,10 @@ export default function CoinManagementScreen({ navigation }: Props) {
   const getTransactionColor = (type: string) => {
     switch (type) {
       case 'purchase':
-      case 'bonus':
         return colors.success;
-      case 'matching':
-      case 'lesson':
+      case 'refund':
+        return colors.success;
+      case 'spend':
         return colors.error;
       default:
         return colors.gray500;
@@ -189,6 +188,19 @@ export default function CoinManagementScreen({ navigation }: Props) {
     </TouchableOpacity>
   );
 
+  const typeLabel = (type: string) => {
+    switch (type) {
+      case 'purchase':
+        return '購入';
+      case 'spend':
+        return '支出';
+      case 'refund':
+        return '返金';
+      default:
+        return type;
+    }
+  };
+
   const renderTransaction = ({ item }: { item: CoinTransaction }) => (
     <View style={styles.transactionItem}>
       <View style={styles.transactionIcon}>
@@ -200,7 +212,29 @@ export default function CoinManagementScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.transactionDetails}>
-        <Text style={styles.transactionTitle}>{item.description}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+          <View
+            style={{
+              backgroundColor:
+                item.type === 'spend' ? colors.error + '15' : colors.success + '15',
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+              borderRadius: 999,
+              marginRight: 8,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: typography.sizes?.caption || 12,
+                color: item.type === 'spend' ? colors.error : colors.success,
+                fontWeight: '600',
+              }}
+            >
+              {typeLabel(item.type)}
+            </Text>
+          </View>
+          <Text style={styles.transactionTitle}>{item.description}</Text>
+        </View>
         <Text style={styles.transactionDate}>{formatDate(item.created_at)}</Text>
       </View>
 

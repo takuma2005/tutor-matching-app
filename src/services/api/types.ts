@@ -160,6 +160,50 @@ export interface CoinService {
   ): Promise<PaginatedResponse<CoinTransaction>>;
 }
 
+// チャット関連の型
+export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read';
+
+export interface Message {
+  id: string;
+  chatRoomId: string;
+  senderId: string;
+  text: string;
+  timestamp: Date;
+  status: MessageStatus;
+}
+
+export interface ChatRoom {
+  id: string;
+  tutorId: string;
+  studentId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  lastMessage?: Message;
+  messageCount?: number;
+}
+
+export interface ChatService {
+  getChatRooms(studentId: string): Promise<ApiResponse<(ChatRoom & { lastMessage?: Message; messageCount?: number })[]>>;
+  getMessages(
+    chatRoomId: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResponse<Message>>;
+  sendMessage(
+    chatRoomId: string,
+    senderId: string,
+    text: string,
+  ): Promise<ApiResponse<Message>>;
+  updateMessageStatus(
+    messageId: string,
+    status: MessageStatus,
+  ): Promise<ApiResponse<Message>>;
+  createChatRoom(
+    tutorId: string,
+    studentId: string,
+  ): Promise<ApiResponse<ChatRoom>>;
+}
+
 // リアルタイム通知型
 export interface NotificationPayload {
   type: 'lesson_booked' | 'lesson_cancelled' | 'lesson_completed' | 'payment_success';
