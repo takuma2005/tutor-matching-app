@@ -433,7 +433,9 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: colors.gray50,
-    margin: spacing.lg,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
     borderRadius: borderRadius.lg,
     padding: spacing.xs,
   },
@@ -461,7 +463,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.semibold,
   },
   listContent: {
-    padding: spacing.lg,
+    padding: spacing.md,
     paddingTop: 0,
   },
   lessonCard: {
@@ -594,6 +596,6 @@ const styles = StyleSheet.create({
     color: colors.gray500,
     textAlign: 'center',
     lineHeight: 24,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
 });
