@@ -317,22 +317,17 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
           >
             {item.text}
           </Text>
-          <View style={styles.messageFooter}>
-            {showTimestamp && (
-              <Text
-                style={[
-                  styles.messageTime,
-                  isOwnMessage ? styles.ownMessageTime : styles.otherMessageTime,
-                ]}
-              >
-                {formatMessageTime(item.timestamp)}
-              </Text>
-            )}
-            {isOwnMessage && (
-              <View style={styles.messageStatus}>{getMessageStatusIcon(item.status)}</View>
-            )}
-          </View>
+          {/* keep status icon inside bubble, but move time outside */}
+          {isOwnMessage && (
+            <View style={styles.messageStatus}>{getMessageStatusIcon(item.status)}</View>
+          )}
         </View>
+        {/* timestamp outside the bubble */}
+        {showTimestamp && (
+          <View style={[styles.messageMetaRow, isOwnMessage ? styles.metaRight : styles.metaLeft]}>
+            <Text style={styles.messageTimeOutside}>{formatMessageTime(item.timestamp)}</Text>
+          </View>
+        )}
       </View>
     );
   };
@@ -646,8 +641,22 @@ const styles = StyleSheet.create({
   messageFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     marginTop: spacing.xs / 2,
+  },
+  messageMetaRow: {
+    marginTop: 2,
+  },
+  metaRight: {
+    alignItems: 'flex-end',
+  },
+  metaLeft: {
+    alignItems: 'flex-start',
+  },
+  messageTimeOutside: {
+    fontSize: typography.fontSizes.xs,
+    color: colors.gray500,
+    marginTop: 2,
   },
   ownMessageText: {
     color: colors.white,

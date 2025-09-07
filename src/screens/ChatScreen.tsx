@@ -109,22 +109,6 @@ export default function ChatScreen({ navigation }: Props) {
     }
   };
 
-  const getMessageStatusIcon = (status: MessageStatus, isOwnMessage: boolean) => {
-    if (!isOwnMessage) return null;
-    switch (status) {
-      case 'sending':
-        return <MaterialIcons name="access-time" size={12} color={colors.gray400} />;
-      case 'sent':
-        return <MaterialIcons name="done" size={12} color={colors.gray400} />;
-      case 'delivered':
-        return <MaterialIcons name="done-all" size={12} color={colors.gray400} />;
-      case 'read':
-        return <MaterialIcons name="done-all" size={12} color={colors.primary} />;
-      default:
-        return null;
-    }
-  };
-
   const renderChatRoom = ({ item }: { item: ChatRoom & { lastMessage?: Message } }) => {
     const tutor = tutors.find((t) => t.id === item.tutorId);
     if (!tutor) return null;
@@ -163,7 +147,6 @@ export default function ChatScreen({ navigation }: Props) {
               <Text style={[styles.timestamp, hasNewMessage && styles.timestampUnread]}>
                 {last ? formatTime(new Date(last.timestamp)) : ''}
               </Text>
-              {last && getMessageStatusIcon(last.status, isOwnMessage)}
             </View>
           </View>
 
