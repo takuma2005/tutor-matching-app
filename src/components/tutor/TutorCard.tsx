@@ -76,16 +76,8 @@ export default function TutorCard({
               {name}
             </Text>
             <View style={styles.ratingContainer}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <MaterialIcons
-                  key={star}
-                  name={star <= rating ? 'star' : 'star-border'}
-                  size={14}
-                  color={colors.warning}
-                  style={styles.starIcon}
-                />
-              ))}
-              <Text style={styles.ratingValue}>{rating}</Text>
+              <MaterialIcons name="star" size={14} color={colors.warning} style={styles.starIcon} />
+              <Text style={styles.ratingValue}>{rating.toFixed(1)}</Text>
               <Text style={styles.ratingText}>({totalLessons})</Text>
             </View>
           </View>
@@ -301,7 +293,7 @@ const styles = StyleSheet.create({
   },
   detailButton: {
     backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.full,
     paddingHorizontal: spacing.md,
     height: 32,
     alignItems: 'center',

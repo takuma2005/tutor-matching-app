@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import Card from '@/components/common/Card';
+import ScreenContainer from '@/components/common/ScreenContainer';
 import { getApiClient } from '@/services/api/mock';
 import type { MatchRequest, Tutor } from '@/services/api/types';
 import { colors, spacing, typography, borderRadius } from '@/styles/theme';
@@ -41,7 +43,7 @@ export default function MatchRequestsScreen() {
 
         setMatchRequests(requestsWithTutors);
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to load match requests:', error);
       Alert.alert('エラー', 'マッチング申請の読み込みに失敗しました。');
     } finally {
@@ -81,7 +83,7 @@ export default function MatchRequestsScreen() {
               } else {
                 Alert.alert('エラー', response.error || 'キャンセルに失敗しました。');
               }
-            } catch (error) {
+            } catch {
               Alert.alert('エラー', 'ネットワークエラーが発生しました。');
             }
           },
@@ -199,7 +201,10 @@ export default function MatchRequestsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <ScreenContainer
+      withScroll={false}
+      contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>マッチング申請</Text>
       </View>
@@ -226,23 +231,24 @@ export default function MatchRequestsScreen() {
         data={matchRequests}
         renderItem={renderMatchRequest}
         keyExtractor={(item) => item.id}
-        ListEmptyComponent={renderEmpty}
+        ListEmptyComponent={() => <Card style={{ alignItems: 'center' }}>{renderEmpty()}</Card>}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.appBackground,
   },
   header: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },

@@ -3,7 +3,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import TutorCard from '../components/tutor/TutorCard';
 import TutorCardSkeleton from '../components/tutor/TutorCardSkeleton';
@@ -11,6 +10,7 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import { SearchStackParamList } from '../navigation/SearchStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import ScreenContainer from '@/components/common/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTutorSearch, type SortOption } from '@/hooks/useTutorSearch';
 import type { Tutor } from '@/services/api/types';
@@ -259,7 +259,10 @@ export default function SearchScreen({ navigation }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <ScreenContainer
+      withScroll={false}
+      contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>探す</Text>
         <Text style={styles.subtitle}>理想の先輩を見つけよう</Text>
@@ -284,19 +287,20 @@ export default function SearchScreen({ navigation }: Props) {
           contentContainerStyle={styles.listContent}
         />
       )}
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.appBackground,
   },
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },
@@ -315,18 +319,26 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md, // カードの左右マージン（spacing.md）と合わせる
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
     gap: spacing.sm,
   },
   searchBar: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
     height: 44,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
   },
   searchInput: {
     flex: 1,
@@ -338,15 +350,23 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
   },
   filterButtonActive: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filtersContainer: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
@@ -418,7 +438,7 @@ const styles = StyleSheet.create({
     color: colors.gray700,
   },
   resultHeader: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
   resultCount: {

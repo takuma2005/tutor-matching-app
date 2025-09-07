@@ -3,12 +3,13 @@ import { RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChatStackParamList } from '../navigation/ChatStackNavigator';
 import { mockApiClient } from '../services/api/mock';
 import { Lesson, Tutor } from '../services/api/types';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
+
+import ScreenContainer from '@/components/common/ScreenContainer';
 
 type LessonHistoryScreenNavigationProp = StackNavigationProp<ChatStackParamList, 'LessonHistory'>;
 type LessonHistoryScreenRouteProp = RouteProp<ChatStackParamList, 'LessonHistory'>;
@@ -173,7 +174,7 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <ScreenContainer withScroll={false}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />
@@ -229,14 +230,14 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         }
       />
-    </SafeAreaView>
+    </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.appBackground,
   },
   header: {
     flexDirection: 'row',
@@ -244,6 +245,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },

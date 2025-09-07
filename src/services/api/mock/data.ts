@@ -10,6 +10,7 @@ import {
   Message,
   ChatRoom,
 } from '../types';
+import type { Notification } from './notificationService';
 
 // テスト用の時間スロット
 const weekdayMorning: TimeSlot[] = [
@@ -371,6 +372,7 @@ export const mockDb = {
   matchRequests: mockMatchRequests,
   chatRooms: mockChatRooms,
   messages: mockMessages,
+  notifications: [] as Notification[],
 };
 
 // ヘルパー関数

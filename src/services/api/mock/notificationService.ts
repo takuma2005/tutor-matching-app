@@ -61,7 +61,7 @@ export class MockNotificationService {
         success: true,
         data: notification,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '通知の作成に失敗しました。',
@@ -81,15 +81,18 @@ export class MockNotificationService {
       }
 
       const userNotifications = mockDb.notifications
-        .filter((n) => n.user_id === userId)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .filter((n: Notification) => n.user_id === userId)
+        .sort(
+          (a: Notification, b: Notification) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        )
         .slice(0, limit);
 
       return {
         success: true,
         data: userNotifications,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '通知の取得に失敗しました。',
@@ -109,7 +112,7 @@ export class MockNotificationService {
         };
       }
 
-      const notification = mockDb.notifications.find((n) => n.id === notificationId);
+      const notification = mockDb.notifications.find((n: Notification) => n.id === notificationId);
       if (!notification) {
         return {
           success: false,
@@ -124,7 +127,7 @@ export class MockNotificationService {
         success: true,
         data: notification,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '通知の更新に失敗しました。',
@@ -144,7 +147,7 @@ export class MockNotificationService {
       }
 
       let updatedCount = 0;
-      mockDb.notifications.forEach((n) => {
+      mockDb.notifications.forEach((n: Notification) => {
         if (n.user_id === userId && !n.is_read) {
           n.is_read = true;
           updatedCount++;
@@ -155,7 +158,7 @@ export class MockNotificationService {
         success: true,
         data: updatedCount,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '通知の更新に失敗しました。',
@@ -175,14 +178,14 @@ export class MockNotificationService {
       }
 
       const unreadCount = mockDb.notifications.filter(
-        (n) => n.user_id === userId && !n.is_read,
+        (n: Notification) => n.user_id === userId && !n.is_read,
       ).length;
 
       return {
         success: true,
         data: unreadCount,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '未読数の取得に失敗しました。',

@@ -11,10 +11,10 @@ import {
   RefreshControl,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import ScreenContainer from '@/components/common/ScreenContainer';
 import { getApiClient } from '@/services/api/mock';
 import type { Student, Tutor, ChatRoom, Message, MessageStatus } from '@/services/api/types';
 // ルーム・メッセージの型は API の型を使用するためローカル定義は削除
@@ -186,7 +186,10 @@ export default function ChatScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <ScreenContainer
+      withScroll={false}
+      contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
+    >
       {/* ヘッダー */}
       <View style={styles.header}>
         <Text style={styles.title}>チャット</Text>
@@ -219,14 +222,14 @@ export default function ChatScreen({ navigation }: Props) {
           <Text style={styles.emptySubtitle}>先輩とマッチングしてメッセージを始めましょう</Text>
         </View>
       )}
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.appBackground,
   },
   chatRoomItemUnread: {
     backgroundColor: colors.primary + '05',
@@ -238,6 +241,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },

@@ -157,10 +157,10 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.appBackground,
   },
   header: {
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.appBackground,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   profileCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.appBackground,
     marginHorizontal: 0,
     marginTop: 0,
     borderRadius: 0,

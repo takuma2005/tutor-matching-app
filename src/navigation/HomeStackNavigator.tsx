@@ -6,7 +6,6 @@ import FavoriteScreen from '../screens/FavoriteScreen';
 import HomeScreen from '../screens/HomeScreen';
 import NotificationScreen from '../screens/NotificationScreen';
 import TutorDetailScreen from '../screens/TutorDetailScreen';
-import { colors } from '../styles/theme';
 
 export type HomeStackParamList = {
   HomeMain: undefined;
@@ -25,7 +24,7 @@ export default function HomeStackNavigator() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: colors.white },
+        cardStyle: { backgroundColor: '#F6FAFF' },
       }}
     >
       <Stack.Screen name="HomeMain" component={HomeScreen} />

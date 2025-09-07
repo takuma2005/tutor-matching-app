@@ -16,6 +16,9 @@ import { useUser } from '../../contexts/UserContext';
 import type { MyPageStackParamList } from '../../navigation/MyPageStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 
+import ScreenContainer from '@/components/common/ScreenContainer';
+import Section from '@/components/common/Section';
+
 type ProfileScreenNavigationProp = StackNavigationProp<MyPageStackParamList, 'Profile'>;
 
 interface ProfileScreenProps {
@@ -48,7 +51,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <ScreenContainer withScroll contentContainerStyle={{ paddingTop: 0 }}>
       {/* ヘッダー */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -88,9 +91,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         </View>
 
         {/* 基本情報 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>基本情報</Text>
-
+        <Section title="基本情報">
           <View style={styles.infoItem}>
             <View style={styles.infoHeader}>
               <MaterialIcons name="person" size={20} color={colors.gray600} />
@@ -114,12 +115,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
             <Text style={styles.infoValue}>{user.grade}</Text>
           </View>
-        </View>
+        </Section>
 
         {/* 連絡先情報 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>連絡先</Text>
-
+        <Section title="連絡先">
           <View style={styles.infoItem}>
             <View style={styles.infoHeader}>
               <MaterialIcons name="email" size={20} color={colors.gray600} />
@@ -135,11 +134,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
             <Text style={styles.infoValue}>{user.phone || '未設定'}</Text>
           </View>
-        </View>
+        </Section>
 
         {/* 興味のある科目 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>興味のある科目</Text>
+        <Section title="興味のある科目">
           {user.interestedSubjects.length > 0 ? (
             <View style={styles.subjectTags}>
               {user.interestedSubjects.map((subject, index) => (
@@ -151,13 +149,12 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           ) : (
             <Text style={styles.noDataText}>設定されていません</Text>
           )}
-        </View>
+        </Section>
 
         {/* 自己紹介 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>自己紹介</Text>
+        <Section title="自己紹介">
           <Text style={styles.bioText}>{user.bio || '自己紹介が未設定です。'}</Text>
-        </View>
+        </Section>
 
         {/* 編集ボタン */}
         <View style={styles.editButtonContainer}>
@@ -172,14 +169,14 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.appBackground,
   },
   loadingContainer: {
     flex: 1,
@@ -209,6 +206,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray100,
   },

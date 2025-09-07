@@ -164,7 +164,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   useEffect(() => {
     // 認証ユーザの変化に合わせてロード
     loadUserProfile();
-  }, [authUser?.id]);
+  }, [authUser?.id, loadUserProfile]);
 
   // Coin domain events -> reflect globally
   useEffect(() => {

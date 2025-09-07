@@ -1,6 +1,6 @@
 import uuid from 'react-native-uuid';
 
-import type { ApiResponse, Lesson, CoinTransaction, Student, Tutor } from '../types';
+import type { ApiResponse, Lesson, CoinTransaction } from '../types';
 import { mockDb } from './data';
 
 export class MockEscrowService {
@@ -59,7 +59,7 @@ export class MockEscrowService {
         success: true,
         data: lesson,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '授業の承認に失敗しました。',
@@ -118,7 +118,7 @@ export class MockEscrowService {
         success: true,
         data: lesson,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '授業の拒否に失敗しました。',
@@ -156,7 +156,7 @@ export class MockEscrowService {
         success: true,
         data: lesson,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '授業の開始に失敗しました。',
@@ -207,7 +207,7 @@ export class MockEscrowService {
       // 家庭教師にコインを送金（実際のシステムでは家庭教師アカウントに送金）
       // ここではモックなので、送金記録のみ作成
       const transferTransaction: CoinTransaction = {
-        id: uuidv4(),
+        id: String(uuid.v4()),
         user_id: tutor.id,
         amount: tutorAmount,
         type: 'lesson_payment',
@@ -221,7 +221,7 @@ export class MockEscrowService {
 
       // プラットフォーム手数料記録
       const feeTransaction: CoinTransaction = {
-        id: uuidv4(),
+        id: String(uuid.v4()),
         user_id: 'platform',
         amount: platformFee,
         type: 'spend',
@@ -251,7 +251,7 @@ export class MockEscrowService {
         success: true,
         data: lesson,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '授業の完了に失敗しました。',
@@ -288,7 +288,7 @@ export class MockEscrowService {
 
         // 返金取引記録を追加
         const refundTransaction: CoinTransaction = {
-          id: uuidv4(),
+          id: String(uuid.v4()),
           user_id: student.id,
           amount: lesson.coin_cost,
           type: 'lesson_refund',
@@ -310,7 +310,7 @@ export class MockEscrowService {
         success: true,
         data: lesson,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '授業のキャンセルに失敗しました。',
@@ -333,7 +333,7 @@ export class MockEscrowService {
         return {
           success: false,
           error: '授業が見つかりません。',
-          data: {} as any,
+          data: {} as unknown as { lesson: Lesson; transactions: CoinTransaction[] },
         };
       }
 
@@ -347,11 +347,11 @@ export class MockEscrowService {
           transactions,
         },
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'エスクローステータスの取得に失敗しました。',
-        data: {} as any,
+        data: {} as unknown as { lesson: Lesson; transactions: CoinTransaction[] },
       };
     }
   }

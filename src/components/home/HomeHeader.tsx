@@ -8,11 +8,30 @@ type Props = {
   coins: number;
   onPressCoinManagement: () => void;
   onPressNotification: () => void;
+  backgroundOpacity?: number; // 0.0 - 1.0
 };
 
-export default function HomeHeader({ coins, onPressCoinManagement, onPressNotification }: Props) {
+export default function HomeHeader({
+  coins,
+  onPressCoinManagement,
+  onPressNotification,
+  backgroundOpacity = 0.2,
+}: Props) {
   return (
-    <View style={styles.fixedHeader} testID="home-header">
+    <View
+      style={[
+        styles.fixedHeader,
+        {
+          backgroundColor: `rgba(255,255,255,${backgroundOpacity})`,
+          shadowColor: backgroundOpacity > 0.5 ? colors.black : 'transparent',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: Math.max(0, (backgroundOpacity - 0.5) * 0.2),
+          shadowRadius: 2,
+          elevation: backgroundOpacity > 0.5 ? 1 : 0,
+        },
+      ]}
+      testID="home-header"
+    >
       <Text style={styles.appName}>センパイ</Text>
       <View style={styles.headerRight}>
         <TouchableOpacity
@@ -20,7 +39,7 @@ export default function HomeHeader({ coins, onPressCoinManagement, onPressNotifi
           onPress={onPressCoinManagement}
           testID="header-coin-button"
         >
-          <MaterialIcons name="account-balance-wallet" size={18} color={colors.warning} />
+          <MaterialIcons name="paid" size={16} color={colors.warning} />
           <Text style={styles.headerCoinText}>{coins.toLocaleString()}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -42,9 +61,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 0,
+    borderBottomColor: 'transparent',
     zIndex: 1000,
   },
   appName: {
@@ -60,15 +79,15 @@ const styles = StyleSheet.create({
   headerCoinButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray100,
-    paddingHorizontal: spacing.md,
-    height: 32,
+    backgroundColor: colors.warning + '20',
+    paddingHorizontal: spacing.sm + spacing.xs,
+    height: 28,
     borderRadius: borderRadius.full,
     marginRight: spacing.sm,
   },
   headerCoinText: {
-    marginLeft: spacing.xs / 2,
-    color: colors.gray800,
+    marginLeft: spacing.xs,
+    color: colors.warning,
     fontWeight: '700',
     fontSize: typography.sizes?.caption || 12,
   },

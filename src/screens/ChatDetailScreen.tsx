@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import type { StackScreenProps } from '@react-navigation/stack';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
@@ -13,8 +14,10 @@ import {
   Alert,
   Animated,
   Image,
+  Keyboard,
+  type KeyboardEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ChatStackParamList } from '../navigation/ChatStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
@@ -25,6 +28,37 @@ import type { Tutor, Student, Message as ApiMessage, MessageStatus } from '@/ser
 type Props = StackScreenProps<ChatStackParamList, 'ChatDetail'>;
 
 export default function ChatDetailScreen({ route, navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = (() => {
+    try {
+      // useBottomTabBarHeight throws if not in a tab context; guard it
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      return useBottomTabBarHeight();
+    } catch {
+      return 56 + insets.bottom; // fallback
+    }
+  })();
+
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  React.useEffect(() => {
+    const showEvt: 'keyboardWillShow' | 'keyboardDidShow' =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt: 'keyboardWillHide' | 'keyboardDidHide' =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates?.height ?? 0);
+    const onHide = () => setKeyboardHeight(0);
+    const subShow = Keyboard.addListener(showEvt, onShow);
+    const subHide = Keyboard.addListener(hideEvt, onHide);
+    return () => {
+      subShow.remove();
+      subHide.remove();
+    };
+  }, []);
+
+  const inputExtraBottomSpace = spacing.sm; // 入力欄の直下に設ける余白
+  const inputAreaHeight = spacing.md * 2 + 44 + 48 + spacing.sm + inputExtraBottomSpace;
+  const bottomOffset = Math.max(tabBarHeight, keyboardHeight);
   const { tutorId, chatRoomId } = route.params;
   const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -390,7 +424,10 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           style={styles.messagesList}
-          contentContainerStyle={styles.messagesContent}
+          contentContainerStyle={[
+            styles.messagesContent,
+            { paddingBottom: bottomOffset + inputAreaHeight + spacing.sm },
+          ]}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => {
             if (!isLoading)
@@ -401,38 +438,8 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
         {/* タイピングインジケーター */}
         {renderTypingIndicator()}
 
-        {/* 授業の申請カード */}
-        <View style={styles.lessonRequestCard}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardHeaderLeft}>
-              <View style={styles.cardIconContainer}>
-                <MaterialIcons name="school" size={18} color={colors.primary} />
-              </View>
-              <Text style={styles.cardHeaderText}>授業リクエスト</Text>
-            </View>
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusBadgeText}>承認待ち</Text>
-            </View>
-          </View>
-
-          <View style={styles.cardContent}>
-            <View style={styles.cardInfoRow}>
-              <MaterialIcons name="event" size={16} color={colors.gray500} />
-              <Text style={styles.cardInfoText}>12月15日(日) 15:00-16:00</Text>
-            </View>
-            <View style={styles.cardInfoRow}>
-              <MaterialIcons name="subject" size={16} color={colors.gray500} />
-              <Text style={styles.cardInfoText}>微分積分（極限・εδ論法）</Text>
-            </View>
-            <View style={styles.cardInfoRow}>
-              <MaterialIcons name="monetization-on" size={16} color={colors.gray500} />
-              <Text style={styles.cardInfoText}>1,800コイン</Text>
-            </View>
-          </View>
-        </View>
-
         {/* 下部CTA：授業を申請する */}
-        <View style={styles.ctaContainer}>
+        <View style={[styles.ctaContainer, { paddingBottom: spacing.sm + insets.bottom }]}>
           <TouchableOpacity
             style={styles.ctaButton}
             onPress={handleLessonRequest}
@@ -443,8 +450,28 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-        {/* 入力エリア */}
-        <View style={styles.inputContainer}>
+        {/* 入力エリア（白いエリアを拡張し、その上部に申請ボタンを配置） */}
+        <View
+          style={[
+            styles.inputContainer,
+            { position: 'absolute', left: 0, right: 0, bottom: bottomOffset },
+          ]}
+        >
+          <View style={styles.inlineCtaContainer}>
+            <TouchableOpacity
+              style={styles.inlineCtaButton}
+              onPress={handleLessonRequest}
+              activeOpacity={0.85}
+            >
+              <MaterialIcons
+                name="add"
+                size={20}
+                color={colors.white}
+                style={styles.inlineCtaIcon}
+              />
+              <Text style={styles.inlineCtaText}>授業を申請</Text>
+            </TouchableOpacity>
+          </View>
           {remainingChars <= 50 && (
             <View style={styles.charCountContainer}>
               <Text style={[styles.charCount, remainingChars <= 0 && styles.charCountError]}>
@@ -487,6 +514,8 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
               )}
             </TouchableOpacity>
           </View>
+          {/* 入力欄の下に少し余白 */}
+          <View style={{ height: spacing.sm }} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -762,6 +791,30 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   ctaButtonText: {
+    color: colors.white,
+    fontWeight: typography.fontWeights.semibold,
+    fontSize: typography.fontSizes.md,
+  },
+  inlineCtaContainer: {
+    marginBottom: spacing.sm,
+  },
+  inlineCtaButton: {
+    height: 44,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  inlineCtaIcon: {
+    marginRight: spacing.xs,
+  },
+  inlineCtaText: {
     color: colors.white,
     fontWeight: typography.fontWeights.semibold,
     fontSize: typography.fontSizes.md,

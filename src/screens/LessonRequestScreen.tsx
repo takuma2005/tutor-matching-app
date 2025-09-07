@@ -1,10 +1,10 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
-import { addMinutes, format as formatDateFns } from 'date-fns';
+import { format as formatDateFns } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import React, { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import {
   View,
   Text,
@@ -16,11 +16,12 @@ import {
 } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import ScreenContainer from '@/components/common/ScreenContainer';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { Tutor, Student, Lesson } from '@/services/api/types';
@@ -96,6 +97,7 @@ LocaleConfig.locales['ja'] = {
 LocaleConfig.defaultLocale = 'ja';
 
 export default function LessonRequestScreen({ route, navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const { tutorId } = route.params;
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
@@ -126,7 +128,6 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
 
   // react-hook-form セットアップ
   const {
-    control,
     setValue,
     watch,
     handleSubmit: formHandleSubmit,
@@ -149,11 +150,11 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
 
   if (!tutor) {
     return (
-      <SafeAreaView style={styles.container}>
+      <ScreenContainer>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>先輩の情報が見つかりません</Text>
         </View>
-      </SafeAreaView>
+      </ScreenContainer>
     );
   }
 
@@ -325,7 +326,10 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ScreenContainer
+      topInsetBackgroundColor={colors.white}
+      contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
+    >
       {/* ヘッダー */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -335,7 +339,11 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
         <View style={styles.headerRight} />
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: spacing.xl * 4 + insets.bottom }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 先輩情報 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>申請先</Text>
@@ -543,8 +551,8 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
         </View>
       </ScrollView>
 
-      {/* 申請ボタン */}
-      <View style={styles.bottomContainer}>
+      {/* 申請ボタン - 固定配置 */}
+      <View style={[styles.bottomContainer, { paddingBottom: insets.bottom + spacing.md }]}>
         <TouchableOpacity
           style={[
             styles.submitButton,
@@ -575,7 +583,7 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
         locale="ja_JP"
         is24Hour
       />
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
@@ -587,7 +595,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 0,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
@@ -600,6 +608,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.gray100,
+    marginLeft: spacing.lg,
   },
   headerTitle: {
     flex: 1,
@@ -611,6 +620,7 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 40,
+    marginRight: spacing.lg,
   },
   scrollView: {
     flex: 1,
@@ -845,10 +855,16 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.medium,
   },
   bottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: spacing.lg,
+    paddingBottom: 0,
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
     backgroundColor: colors.white,
+    alignItems: 'center',
   },
   submitButton: {
     flexDirection: 'row',
@@ -862,6 +878,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+    width: '92%',
+    maxWidth: 560,
   },
   submitButtonDisabled: {
     backgroundColor: colors.gray400,
