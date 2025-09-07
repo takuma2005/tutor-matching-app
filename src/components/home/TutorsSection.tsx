@@ -62,7 +62,7 @@ export default function TutorsSection({
 const styles = StyleSheet.create({
   section: {
     paddingVertical: spacing.sm,
-    backgroundColor: colors.white,
+    backgroundColor: 'transparent',
   },
   sectionHeader: {
     flexDirection: 'row',

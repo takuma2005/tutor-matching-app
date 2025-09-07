@@ -12,8 +12,9 @@ export type RatingProps = {
 };
 
 export default function Rating({ value, max = 5, size = 16, showValue = true }: RatingProps) {
-  const full = Math.floor(value);
-  const hasHalf = value - full >= 0.5;
+  const clamped = Math.max(0, Math.min(value, max));
+  const full = Math.floor(clamped);
+  const hasHalf = clamped - full >= 0.5 && full < max;
   const empty = max - full - (hasHalf ? 1 : 0);
 
   return (

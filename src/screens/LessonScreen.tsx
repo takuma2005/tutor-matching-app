@@ -1,17 +1,25 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import Card from '@/components/common/Card';
+import ScreenContainer from '@/components/common/ScreenContainer';
 import { useUser } from '@/contexts/UserContext';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import { MockEscrowService } from '@/services/api/mock/escrowService';
-import type { Tutor, Lesson as ApiLesson } from '@/services/api/types';
+import type { Tutor } from '@/services/api/types';
 
-type LessonStatus = 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled' | 'rejected';
+type LessonStatus =
+  | 'pending'
+  | 'approved'
+  | 'scheduled'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+  | 'rejected';
 
 type Lesson = {
   id: string;
@@ -222,7 +230,7 @@ export default function LessonScreen() {
             } else {
               Alert.alert('エラー', response.error || '完了処理に失敗しました。');
             }
-          } catch (error) {
+          } catch {
             Alert.alert('エラー', 'ネットワークエラーが発生しました。');
           } finally {
             setIsLoading(false);
@@ -273,7 +281,7 @@ export default function LessonScreen() {
               } else {
                 Alert.alert('エラー', response.error || 'キャンセル処理に失敗しました。');
               }
-            } catch (error) {
+            } catch {
               Alert.alert('エラー', 'ネットワークエラーが発生しました。');
             } finally {
               setIsLoading(false);
@@ -339,7 +347,10 @@ export default function LessonScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <ScreenContainer
+      withScroll={false}
+      contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>授業</Text>
         <Text style={styles.subtitle}>予約の管理と履歴</Text>
@@ -373,7 +384,7 @@ export default function LessonScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
+          <Card style={{ alignItems: 'center' }}>
             <MaterialIcons
               name={selectedTab === 'upcoming' ? 'event-note' : 'history'}
               size={64}
@@ -389,22 +400,23 @@ export default function LessonScreen() {
                 ? 'チャットから先輩に授業を申請してみましょう'
                 : '授業を完了すると履歴に表示されます'}
             </Text>
-          </View>
+          </Card>
         }
       />
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.appBackground,
   },
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },
@@ -555,6 +567,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray600,
   },
   completeButtonText: {
+    fontSize: typography.fontSizes.sm || 14,
+    color: colors.white,
+    fontWeight: typography.fontWeights.semibold,
+  },
+  cancelButtonText: {
     fontSize: typography.fontSizes.sm || 14,
     color: colors.white,
     fontWeight: typography.fontWeights.semibold,

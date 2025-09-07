@@ -17,6 +17,9 @@ import { useUser } from '../../contexts/UserContext';
 import type { MyPageStackParamList } from '../../navigation/MyPageStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 
+import ScreenContainer from '@/components/common/ScreenContainer';
+import Section from '@/components/common/Section';
+
 type ProfileEditScreenNavigationProp = StackNavigationProp<MyPageStackParamList, 'ProfileEdit'>;
 
 interface ProfileEditScreenProps {
@@ -148,7 +151,7 @@ export default function ProfileEditScreen({ navigation }: ProfileEditScreenProps
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <ScreenContainer withScroll contentContainerStyle={{ paddingTop: 0 }}>
       {/* ヘッダー */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
@@ -177,9 +180,7 @@ export default function ProfileEditScreen({ navigation }: ProfileEditScreenProps
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* 基本情報 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>基本情報</Text>
-
+        <Section title="基本情報">
           <View style={styles.inputGroup}>
             <Text style={styles.label}>名前 *</Text>
             <TextInput
@@ -210,12 +211,10 @@ export default function ProfileEditScreen({ navigation }: ProfileEditScreenProps
               placeholder="例：高校3年、大学2年"
             />
           </View>
-        </View>
+        </Section>
 
         {/* 連絡先 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>連絡先</Text>
-
+        <Section title="連絡先">
           <View style={styles.inputGroup}>
             <Text style={styles.label}>メールアドレス</Text>
             <TextInput
@@ -238,11 +237,10 @@ export default function ProfileEditScreen({ navigation }: ProfileEditScreenProps
               keyboardType="phone-pad"
             />
           </View>
-        </View>
+        </Section>
 
         {/* 興味のある科目 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>興味のある科目</Text>
+        <Section title="興味のある科目">
           <Text style={styles.sectionSubtitle}>学びたい科目を選択してください（複数選択可）</Text>
 
           <View style={styles.subjectGrid}>
@@ -263,7 +261,7 @@ export default function ProfileEditScreen({ navigation }: ProfileEditScreenProps
               );
             })}
           </View>
-        </View>
+        </Section>
 
         {/* 自己紹介 */}
         <View style={styles.section}>
@@ -283,7 +281,7 @@ export default function ProfileEditScreen({ navigation }: ProfileEditScreenProps
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
@@ -308,6 +306,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray100,
   },

@@ -1,14 +1,13 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Badge from '../components/common/Badge';
 import BottomSheet from '../components/common/BottomSheet';
-import { colors, spacing, typography, borderRadius } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 
+import ScreenContainer from '@/components/common/ScreenContainer';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { CoinTransaction } from '@/services/api/types';
@@ -138,66 +137,51 @@ export default function CoinManagementScreen({ navigation }: Props) {
     }
   };
 
-  const renderCoinPackage = (coinPackage: CoinPackage) => (
-    <TouchableOpacity
-      key={coinPackage.id}
-      style={[
-        styles.packageCard,
-        coinPackage.popular && styles.popularPackage,
-        selectedPackage === coinPackage.id && styles.selectedPackage,
-      ]}
-      onPress={() => setSelectedPackage(coinPackage.id)}
-      activeOpacity={0.9}
-    >
-      <LinearGradient
-        colors={
-          selectedPackage === coinPackage.id
-            ? [colors.primary + '10', colors.primary + '05']
-            : [colors.gray50, colors.gray50]
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+  const renderCoinPackage = (coinPackage: CoinPackage) => {
+    const baseline = Math.round(coinPackage.coins * 1.2);
+    const saving = baseline - coinPackage.price;
+    const percent = saving > 0 ? Math.round((saving / baseline) * 100) : 0;
+    return (
+      <TouchableOpacity
+        key={coinPackage.id}
+        style={[
+          styles.packageCard,
+          coinPackage.popular && styles.popularPackage,
+          selectedPackage === coinPackage.id && styles.selectedPackage,
+        ]}
+        onPress={() => setSelectedPackage(coinPackage.id)}
+        activeOpacity={0.9}
+      >
+        {coinPackage.popular && (
+          <View style={styles.popularBadge}>
+            <Badge color="info" size="sm">
+              人気No.1
+            </Badge>
+          </View>
+        )}
 
-      {coinPackage.popular && (
-        <View style={styles.popularBadge}>
-          <Badge color="warning" size="sm">
-            人気
-          </Badge>
+        <View style={styles.coinAmount}>
+          <View style={styles.coinIcon}>
+            <MaterialIcons name="paid" size={20} color={colors.warning} />
+          </View>
+          <Text style={styles.coinValue}>{coinPackage.coins.toLocaleString()}</Text>
+          <Text style={styles.coinUnit}>コイン</Text>
+          {saving > 0 && <Text style={styles.savingText}>約{percent}%お得</Text>}
+          {coinPackage.bonus && <Text style={styles.bonusText}>+{coinPackage.bonus} ボーナス</Text>}
         </View>
-      )}
 
-      <View style={styles.coinAmount}>
-        <MaterialIcons name="monetization-on" size={32} color={colors.warning} />
-        <Text style={styles.coinValue}>{coinPackage.coins.toLocaleString()}</Text>
-        {coinPackage.bonus && <Text style={styles.bonusText}>+{coinPackage.bonus} ボーナス</Text>}
-      </View>
-
-      <View style={styles.priceSection}>
-        <Text style={styles.price}>¥{coinPackage.price.toLocaleString()}</Text>
         <TouchableOpacity
-          style={styles.purchaseButton}
+          style={[
+            styles.priceButton,
+            selectedPackage === coinPackage.id && styles.priceButtonSelected,
+          ]}
           onPress={() => handlePurchase(coinPackage)}
           disabled={isLoading}
         >
-          <Text style={styles.purchaseButtonText}>{isLoading ? '処理中...' : '購入'}</Text>
+          <Text style={styles.priceButtonText}>¥{coinPackage.price.toLocaleString()}</Text>
         </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const typeLabel = (type: string) => {
-    switch (type) {
-      case 'purchase':
-        return '購入';
-      case 'spend':
-        return '支出';
-      case 'refund':
-        return '返金';
-      default:
-        return type;
-    }
+      </TouchableOpacity>
+    );
   };
 
   const renderTransaction = ({ item }: { item: CoinTransaction }) => (
@@ -211,28 +195,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.transactionDetails}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-          <View
-            style={{
-              backgroundColor: item.type === 'spend' ? colors.error + '15' : colors.success + '15',
-              paddingHorizontal: 8,
-              paddingVertical: 2,
-              borderRadius: 999,
-              marginRight: 8,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: typography.sizes?.caption || 12,
-                color: item.type === 'spend' ? colors.error : colors.success,
-                fontWeight: '600',
-              }}
-            >
-              {typeLabel(item.type)}
-            </Text>
-          </View>
-          <Text style={styles.transactionTitle}>{item.description}</Text>
-        </View>
+        <Text style={styles.transactionTitle}>{item.description}</Text>
         <Text style={styles.transactionDate}>{formatDate(item.created_at)}</Text>
       </View>
 
@@ -249,8 +212,8 @@ export default function CoinManagementScreen({ navigation }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* ヘッダー */}
+    <ScreenContainer withScroll contentContainerStyle={{ paddingTop: 0 }}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />
@@ -273,7 +236,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
         </View>
 
         {/* コイン購入パッケージ */}
-        <View style={styles.section}>
+        <View style={[styles.section, styles.packagesSection]}>
           <Text style={styles.sectionTitle}>コイン購入</Text>
           <Text style={styles.sectionSubtitle}>
             マッチング申請や授業予約にコインをご利用ください
@@ -310,26 +273,28 @@ export default function CoinManagementScreen({ navigation }: Props) {
           <View style={{ height: spacing.xl }} />
         </ScrollView>
       </BottomSheet>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.appBackground,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    height: 60,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -339,7 +304,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: typography.sizes?.h3 || 20,
     fontWeight: '600',
-
     color: colors.gray900,
     textAlign: 'center',
     marginHorizontal: spacing.md,
@@ -351,11 +315,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   balanceSection: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
   balanceCard: {
     backgroundColor: colors.primary + '10',
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
@@ -379,32 +345,40 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes?.h4 || 18,
     fontWeight: '600',
     color: colors.gray900,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   sectionSubtitle: {
     fontSize: typography.sizes?.caption || 12,
     color: colors.gray600,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   packagesGrid: {
-    // gap is not fully supported across RN versions; use margin on children instead
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+  },
+  packagesSection: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
   },
   packageCard: {
     backgroundColor: colors.white,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.gray200,
     borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    padding: spacing.md,
+    width: '48%',
+    minHeight: 220,
     alignItems: 'center',
+    justifyContent: 'space-between',
     position: 'relative',
-    overflow: 'hidden',
-    marginBottom: spacing.md,
+    overflow: 'visible',
+    marginBottom: spacing.lg,
+    ...shadows.sm,
   },
   popularPackage: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary + '05',
   },
   selectedPackage: {
     borderColor: colors.primary,
@@ -412,12 +386,13 @@ const styles = StyleSheet.create({
   },
   popularBadge: {
     position: 'absolute',
-    top: -8,
-    right: 16,
+    top: -10,
+    alignSelf: 'center',
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.full || 999,
+    zIndex: 5,
   },
   popularText: {
     fontSize: 10,
@@ -425,13 +400,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   coinAmount: {
-    flex: 1,
     alignItems: 'center',
+    marginBottom: spacing.md,
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  coinIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.warning + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   coinValue: {
-    fontSize: typography.sizes?.h3 || 20,
+    fontSize: typography.sizes?.h4 || 18,
     fontWeight: '700',
     color: colors.gray900,
+    marginTop: spacing.xs,
+  },
+  coinUnit: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray500,
     marginTop: spacing.xs,
   },
   bonusText: {
@@ -439,41 +429,42 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontWeight: '500',
   },
-  priceSection: {
-    alignItems: 'flex-end',
-  },
-  price: {
-    fontSize: typography.sizes?.h4 || 18,
+  savingText: {
+    marginTop: spacing.xs,
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.success,
     fontWeight: '600',
-    color: colors.gray900,
-    marginBottom: spacing.sm,
   },
-  purchaseButton: {
+  priceButton: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    minWidth: 80,
+    height: 40,
+    borderRadius: borderRadius.full,
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
-  purchaseButtonText: {
-    fontSize: typography.sizes?.caption || 12,
+  priceButtonSelected: {
+    backgroundColor: colors.primaryDark,
+  },
+  priceButtonText: {
+    fontSize: typography.sizes?.h4 || 18,
     color: colors.white,
-    fontWeight: '600',
+    fontWeight: '700',
+    lineHeight: 40,
+    textAlign: 'center',
   },
   historyContainer: {
-    backgroundColor: colors.gray50,
-    borderRadius: borderRadius.lg,
-    padding: spacing.sm,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
   },
   transactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.xs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
   },
   transactionIcon: {
     width: 36,

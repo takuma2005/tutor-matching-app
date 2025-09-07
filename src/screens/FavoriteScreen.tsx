@@ -2,13 +2,14 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import TutorCard from '../components/tutor/TutorCard';
 import TutorCardSkeleton from '../components/tutor/TutorCardSkeleton';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import Card from '@/components/common/Card';
+import ScreenContainer from '@/components/common/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiClient } from '@/services/api/mock';
 import type { Tutor } from '@/services/api/types';
@@ -58,7 +59,7 @@ export default function FavoriteScreen({ navigation }: Props) {
         }
       })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [favorites]);
 
   const handleTutorPress = (tutorId: string) => {
     navigation.navigate('TutorDetail', { tutorId });
@@ -104,8 +105,7 @@ export default function FavoriteScreen({ navigation }: Props) {
       <TouchableOpacity
         style={styles.browseButton}
         onPress={() => {
-          // タブバーの探すタブに切り替える（実装は後で）
-          console.log('Navigate to search tab');
+          // TODO: タブバーの「探す」タブへ切り替える処理を実装する
         }}
       >
         <MaterialIcons name="search" size={20} color={colors.white} />
@@ -115,7 +115,10 @@ export default function FavoriteScreen({ navigation }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <ScreenContainer
+      withScroll={false}
+      contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
+    >
       {/* ヘッダー */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -151,10 +154,12 @@ export default function FavoriteScreen({ navigation }: Props) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ListEmptyComponent={renderEmptyState}
+          ListEmptyComponent={() => (
+            <Card style={{ alignItems: 'center' }}>{renderEmptyState()}</Card>
+          )}
         />
       )}
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
@@ -169,6 +174,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },

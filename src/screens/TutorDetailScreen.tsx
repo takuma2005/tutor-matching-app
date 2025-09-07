@@ -15,7 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import type { ImageStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BottomSheet from '../components/common/BottomSheet';
 import { useFavorites } from '../contexts/FavoritesContext';
@@ -23,6 +23,8 @@ import type { HomeStackParamList } from '../navigation/HomeStackNavigator';
 import type { SearchStackParamList } from '../navigation/SearchStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import ScreenContainer from '@/components/common/ScreenContainer';
+import Section from '@/components/common/Section';
 import { getApiClient } from '@/services/api/mock';
 import type { Tutor, Student } from '@/services/api/types';
 
@@ -33,6 +35,7 @@ type Props = HomeTutorDetailProps | SearchTutorDetailProps;
 const MATCHING_COST = 300; // マッチングに必要なコイン数
 
 export default function TutorDetailScreen({ route, navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const { tutorId } = route.params;
   const [isLoading, setIsLoading] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
@@ -155,7 +158,7 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
               } else {
                 Alert.alert('エラー', response.error || 'マッチング申請に失敗しました。');
               }
-            } catch (error) {
+            } catch {
               Alert.alert('エラー', 'ネットワークエラーが発生しました。');
             } finally {
               setIsLoading(false);
@@ -198,7 +201,10 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <ScreenContainer
+      withScroll={false}
+      contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
+    >
       {/* ヘッダー */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -250,23 +256,20 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
         </View>
 
         {/* 科目 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>指導科目</Text>
+        <Section title="指導科目" style={{ marginHorizontal: spacing.lg }}>
           {renderSubjectTags()}
-        </View>
+        </Section>
 
         {/* 自己紹介 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>自己紹介</Text>
+        <Section title="自己紹介" style={{ marginHorizontal: spacing.lg }}>
           <Text style={styles.introText}>
             {tutor.bio ||
               `こんにちは！${tutor.name}です。${tutor.school}で勉強しています。\n\n得意科目は${tutor.subjects_taught.slice(0, 2).join('、')}です。丁寧に指導させていただきます。一緒に頑張りましょう！`}
           </Text>
-        </View>
+        </Section>
 
         {/* 基本情報 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>基本情報</Text>
+        <Section title="基本情報" style={{ marginHorizontal: spacing.lg }}>
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>学校</Text>
@@ -287,14 +290,14 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
               </Text>
             </View>
           </View>
-        </View>
+        </Section>
 
         {/* 底部の余白 */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
       {/* マッチング申請とお気に入りボタン */}
-      <View style={styles.bottomContainer}>
+      <View style={[styles.bottomContainer, { paddingBottom: spacing.lg + insets.bottom }]}>
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={styles.favoriteButtonBottom}
@@ -424,20 +427,21 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.appBackground,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },

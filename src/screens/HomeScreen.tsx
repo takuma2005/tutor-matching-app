@@ -1,18 +1,17 @@
 import { useFocusEffect, type NavigationProp, type ParamListBase } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useUser } from '../contexts/UserContext';
 import { HomeStackParamList } from '../navigation/HomeStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
-import HomeHeader from '@/components/home/HomeHeader';
+import BlurHeader from '@/components/home/BlurHeader';
 import TutorsSection from '@/components/home/TutorsSection';
 import UpcomingLessonCard from '@/components/home/UpcomingLessonCard';
+import WelcomeCard from '@/components/home/WelcomeCard';
 import { useHomeData } from '@/hooks/useHomeData';
 type HomeScreenNavigationProp = StackNavigationProp<HomeStackParamList, 'HomeMain'>;
 
@@ -24,6 +23,7 @@ export default function HomeScreen({ navigation }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user, refreshCoins } = useUser();
   const { recommendedTutors, newTutors, upcoming } = useHomeData();
+  const [scrollY, setScrollY] = React.useState(0);
 
   // 画面フォーカス時にコイン残高をリフレッシュ
   useFocusEffect(
@@ -38,29 +38,21 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <HomeHeader
-        coins={user?.coins ?? 0}
-        onPressCoinManagement={() => navigation.navigate('CoinManagement')}
-        onPressNotification={() => navigation.navigate('Notification')}
-      />
-
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <LinearGradient
-          colors={['#8B7ED8', '#B794F6', '#E879F9']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
-        >
-          <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeText}>おはよう、{user?.name || 'ゲスト'}さん！👋</Text>
-            <Text style={styles.subtitle}>今日も新しい学びの出会いを見つけよう</Text>
-          </View>
-        </LinearGradient>
-
-        {/* Rounded transition with overlaid cards */}
+    <View style={styles.root}>
+      {/* Background ScrollView */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContentContainer}
+        showsVerticalScrollIndicator={false}
+        onScroll={(e) => {
+          const y = e.nativeEvent.contentOffset.y;
+          setScrollY(y);
+        }}
+        scrollEventThrottle={16}
+      >
+        {/* Content with top padding for header */}
         <View style={styles.contentContainer}>
+          <WelcomeCard name={user?.name || 'ゲスト'} />
           {/* 授業の予定（余白をやや詰める） */}
           <View style={[styles.section, styles.scheduleSection]}>
             <View style={[styles.sectionHeader, styles.sectionHeaderTight]}>
@@ -99,14 +91,22 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={styles.bottomSpacing} />
         </View>
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Blur Header */}
+      <BlurHeader
+        coins={user?.coins ?? 0}
+        onPressCoinManagement={() => navigation.navigate('CoinManagement')}
+        onPressNotification={() => navigation.navigate('Notification')}
+        scrollY={scrollY}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: '#F6FAFF',
   },
   fixedHeader: {
     paddingHorizontal: spacing.lg,
@@ -121,6 +121,11 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#F6FAFF',
+  },
+  scrollContentContainer: {
+    paddingTop: 140, // SafeArea + ヘッダー分のスペース（より大きく）
+    paddingBottom: 100, // タブバー分のスペース
   },
   headerGradient: {
     paddingTop: spacing.md,
@@ -175,11 +180,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
   },
   contentContainer: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -spacing.xl,
-    paddingTop: spacing.xl,
+    backgroundColor: '#F6FAFF',
     flex: 1,
   },
   overlaidCardSection: {
@@ -336,7 +337,7 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingVertical: spacing.sm,
-    backgroundColor: colors.white,
+    backgroundColor: 'transparent',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -479,6 +480,6 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: spacing.xl,
-    backgroundColor: colors.white,
+    backgroundColor: '#F6FAFF',
   },
 });

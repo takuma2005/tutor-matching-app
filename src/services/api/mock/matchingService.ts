@@ -95,7 +95,7 @@ export class MockMatchingService {
         success: true,
         data: matchRequest,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'マッチング申請の送信に失敗しました。',
@@ -123,7 +123,7 @@ export class MockMatchingService {
         success: true,
         data: requests,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'マッチング申請一覧の取得に失敗しました。',
@@ -151,7 +151,7 @@ export class MockMatchingService {
         success: true,
         data: requests,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'マッチング申請一覧の取得に失敗しました。',
@@ -200,7 +200,7 @@ export class MockMatchingService {
         success: true,
         data: matchRequest,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'マッチング申請の承認に失敗しました。',
@@ -241,7 +241,7 @@ export class MockMatchingService {
 
         // 返金取引記録を追加
         const refundTransaction: CoinTransaction = {
-          id: uuidv4(),
+          id: String(uuid.v4()),
           user_id: student.id,
           amount: matchRequest.coin_cost,
           type: 'refund',
@@ -257,7 +257,7 @@ export class MockMatchingService {
         success: true,
         data: matchRequest,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'マッチング申請の拒否に失敗しました。',
@@ -298,7 +298,7 @@ export class MockMatchingService {
 
         // 返金取引記録を追加
         const refundTransaction: CoinTransaction = {
-          id: uuidv4(),
+          id: String(uuid.v4()),
           user_id: student.id,
           amount: matchRequest.coin_cost,
           type: 'refund',
@@ -314,7 +314,7 @@ export class MockMatchingService {
         success: true,
         data: matchRequest,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'マッチング申請のキャンセルに失敗しました。',

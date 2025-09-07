@@ -52,7 +52,14 @@ export interface Lesson {
   tutor_id: string;
   student_id: string;
   subject: string;
-  status: 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled' | 'rejected';
+  status:
+    | 'pending'
+    | 'approved'
+    | 'scheduled'
+    | 'in_progress'
+    | 'completed'
+    | 'cancelled'
+    | 'rejected';
   scheduled_at: string;
   duration_minutes: number;
   coin_cost: number;

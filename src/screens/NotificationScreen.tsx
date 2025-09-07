@@ -2,11 +2,20 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import type { ComponentProps } from 'react';
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  Image,
+} from 'react-native';
 
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import Card from '@/components/common/Card';
+import ScreenContainer from '@/components/common/ScreenContainer';
 import type { Notification, NotificationType } from '@/services/api/mock/notificationService';
 import { MockNotificationService } from '@/services/api/mock/notificationService';
 
@@ -18,54 +27,8 @@ type LocalNotification = Notification & {
   actionRequired?: boolean;
 };
 
-// モック通知データ
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'lesson_request',
-    title: '授業申請',
-    message: '田中先輩から数学の授業申請が届いています。',
-    timestamp: new Date('2024-01-15T14:30:00'),
-    isRead: false,
-    actionRequired: true,
-  },
-  {
-    id: '2',
-    type: 'lesson_confirmed',
-    title: '授業確定',
-    message: '明日14:00からの英語の授業が確定しました。',
-    timestamp: new Date('2024-01-15T10:15:00'),
-    isRead: false,
-  },
-  {
-    id: '3',
-    type: 'message',
-    title: '新しいメッセージ',
-    message: '山田先輩からメッセージが届きました。',
-    timestamp: new Date('2024-01-14T16:45:00'),
-    isRead: true,
-  },
-  {
-    id: '4',
-    type: 'lesson_reminder',
-    title: '授業リマインダー',
-    message: '1時間後に物理の授業があります。準備はお済みですか？',
-    timestamp: new Date('2024-01-13T13:00:00'),
-    isRead: true,
-  },
-  {
-    id: '5',
-    type: 'system',
-    title: 'システム通知',
-    message: 'アプリが最新バージョンに更新されました。',
-    timestamp: new Date('2024-01-12T09:00:00'),
-    isRead: true,
-  },
-];
-
 export default function NotificationScreen() {
   const [notifications, setNotifications] = useState<LocalNotification[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const notificationService = useMemo(() => new MockNotificationService(), []);
 
@@ -78,7 +41,6 @@ export default function NotificationScreen() {
         const transformedNotifications: LocalNotification[] = response.data.map((n) => ({
           ...n,
           timestamp: new Date(n.created_at),
-          isRead: n.is_read,
           actionRequired: ['match_request_received', 'lesson_request_received'].includes(n.type),
         }));
 
@@ -87,14 +49,12 @@ export default function NotificationScreen() {
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {
-      setIsLoading(false);
       setIsRefreshing(false);
     }
   }, [notificationService]);
 
   useFocusEffect(
     useCallback(() => {
-      setIsLoading(true);
       loadNotifications();
     }, [loadNotifications]),
   );
@@ -177,11 +137,11 @@ export default function NotificationScreen() {
 
   const handleNotificationPress = async (notification: LocalNotification) => {
     // 未読の場合は既読にする
-    if (!notification.isRead) {
+    if (!notification.is_read) {
       try {
         await notificationService.markAsRead(notification.id);
         setNotifications((prev) =>
-          prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)),
+          prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n)),
         );
       } catch (error) {
         console.error('Failed to mark notification as read:', error);
@@ -210,7 +170,7 @@ export default function NotificationScreen() {
   const markAllAsRead = async () => {
     try {
       await notificationService.markAllAsRead('student-1');
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
     }
@@ -250,54 +210,67 @@ export default function NotificationScreen() {
     }
   };
 
-  const renderNotification = ({ item }: { item: Notification }) => (
+  const renderNotification = ({ item }: { item: LocalNotification }) => (
     <TouchableOpacity
-      style={[styles.notificationItem, !item.isRead && styles.unreadNotification]}
+      style={[styles.notificationItem, !item.is_read && styles.unreadNotification]}
       onPress={() => handleNotificationPress(item)}
     >
-      <View style={styles.notificationContent}>
-        <View style={styles.iconContainer}>
-          <View
-            style={[
-              styles.iconBackground,
-              { backgroundColor: getNotificationColor(item.type) + '20' },
-            ]}
-          >
-            <MaterialIcons
-              name={getNotificationIcon(item.type) as MaterialIconName}
-              size={20}
-              color={getNotificationColor(item.type)}
-            />
-          </View>
-          {!item.isRead && <View style={styles.unreadDot} />}
-        </View>
+      {/* 左上：種類アイコン */}
+      <View style={styles.typeIconWrapper}>
+        <MaterialIcons
+          name={getNotificationIcon(item.type) as MaterialIconName}
+          size={20}
+          color={getNotificationColor(item.type)}
+        />
+      </View>
 
+      {/* 中央：人物アイコンとその下にテキスト */}
+      <View style={styles.contentArea}>
+        <View style={styles.avatarCircle}>
+          <Image
+            source={{
+              uri: item.message.includes('田中')
+                ? 'https://randomuser.me/api/portraits/men/1.jpg'
+                : item.message.includes('佐藤')
+                  ? 'https://randomuser.me/api/portraits/women/2.jpg'
+                  : item.message.includes('高橋')
+                    ? 'https://randomuser.me/api/portraits/men/3.jpg'
+                    : item.message.includes('中村')
+                      ? 'https://randomuser.me/api/portraits/women/4.jpg'
+                      : item.message.includes('山田')
+                        ? 'https://randomuser.me/api/portraits/men/5.jpg'
+                        : 'https://randomuser.me/api/portraits/men/6.jpg',
+            }}
+            style={styles.avatarImage}
+            defaultSource={{
+              uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            }}
+          />
+        </View>
         <View style={styles.textContainer}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.notificationTitle, !item.isRead && styles.unreadTitle]}>
-              {item.title}
-            </Text>
-            <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
-          </View>
-          <Text style={[styles.message, !item.isRead && styles.unreadMessage]} numberOfLines={2}>
+          <Text style={[styles.message, !item.is_read && styles.unreadMessage]}>
             {item.message}
           </Text>
           {item.actionRequired && (
             <View style={styles.actionBadge}>
-              <Text style={styles.actionText}>要対応</Text>
+              <Text style={styles.actionBadgeText}>要対応</Text>
             </View>
           )}
         </View>
       </View>
 
-      <MaterialIcons name="chevron-right" size={20} color={colors.gray400} />
+      {/* 右上：時刻 */}
+      <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
     </TouchableOpacity>
   );
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <ScreenContainer
+      withScroll={false}
+      contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
+    >
       {/* ヘッダー */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -331,28 +304,29 @@ export default function NotificationScreen() {
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
+          <Card style={{ alignItems: 'center' }}>
             <MaterialIcons name="notifications-none" size={64} color={colors.gray300} />
             <Text style={styles.emptyTitle}>通知はありません</Text>
             <Text style={styles.emptySubtitle}>新しい通知が届くとここに表示されます</Text>
-          </View>
+          </Card>
         }
       />
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.appBackground,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },
@@ -393,33 +367,42 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '500',
   },
+  demoButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
   demoText: {
     fontSize: typography.sizes?.caption || 12,
     color: colors.gray600,
     fontWeight: '500',
   },
   listContent: {
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   notificationItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    alignItems: 'flex-start',
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
+    borderBottomColor: colors.gray200,
+    position: 'relative',
+    backgroundColor: colors.white,
   },
   unreadNotification: {
-    backgroundColor: colors.primary + '05',
+    backgroundColor: colors.primary + '15',
   },
-  notificationContent: {
-    flexDirection: 'row',
+  contentArea: {
+    flexDirection: 'column',
     flex: 1,
     alignItems: 'flex-start',
+    marginLeft: spacing.sm,
   },
-  iconContainer: {
-    position: 'relative',
-    marginRight: spacing.md,
+  textContainer: {
+    flex: 1,
+    paddingRight: spacing.xl,
+    marginTop: spacing.xs + 2, // アイコンとの隙間を2px追加
+    justifyContent: 'center',
   },
   iconBackground: {
     width: 40,
@@ -427,60 +410,99 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+  },
+  typeIconWrapper: {
+    position: 'relative',
+    marginTop: 2,
+  },
+  avatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   unreadDot: {
     position: 'absolute',
-    top: 2,
-    right: 2,
+    right: -2,
+    top: -2,
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: colors.error,
-  },
-  textContainer: {
-    flex: 1,
+    borderWidth: 2,
+    borderColor: colors.white,
   },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.xs / 2,
   },
   notificationTitle: {
     fontSize: typography.sizes?.body || 16,
-    fontWeight: '500',
-    color: colors.gray700,
-    flex: 1,
-    marginRight: spacing.sm,
+    fontWeight: '600',
+    color: colors.gray900,
+    flexShrink: 1,
+    marginRight: spacing.xs,
   },
   unreadTitle: {
     fontWeight: '600',
     color: colors.gray900,
   },
   timestamp: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
     fontSize: typography.sizes?.caption || 12,
     color: colors.gray500,
   },
+  messageWrapper: {
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
   message: {
-    fontSize: typography.sizes?.caption || 12,
-    color: colors.gray600,
-    lineHeight: 18,
+    fontSize: typography.sizes?.body || 16,
+    color: colors.gray700,
+    lineHeight: 20,
   },
   unreadMessage: {
     color: colors.gray700,
   },
-  actionBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.warning + '20',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    marginTop: spacing.xs,
+  titleLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+    marginTop: 2,
   },
-  actionText: {
+  actionBadge: {
+    backgroundColor: colors.warning + '20',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full || 12,
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs / 2,
+    minHeight: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionBadgeText: {
     fontSize: 10,
     color: colors.warning,
-    fontWeight: '600',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
   },
   emptyContainer: {
     flex: 1,

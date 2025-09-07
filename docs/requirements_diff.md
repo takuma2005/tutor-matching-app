@@ -296,3 +296,36 @@
   - プロフィール（先輩）に料金項目 + 最低料金バリデーション追加
 - 長期（本番統合）
   - Supabase 認証/DB/リアルタイム統合、Stripe Connect での購入/エスクロー/送金実装
+
+### 2025-09-07（申請画面・検索UI・通知画面の大幅改修）
+
+- 授業申請（LessonRequestScreen）
+  - 二重スクロールを解消し、固定CTAを画面下に固定＋中央寄せ（セーフエリア対応）。
+  - 下部見切れ対策として ScrollView の contentContainerStyle.paddingBottom を増加。
+  - ヘッダーの左右/上のセーフエリアを白で連結し、青い背景が見えないように統一。
+  - 申請ボタンの位置・余白を微調整（少し上に配置）。
+
+- 探す（SearchScreen）
+  - 検索バー/フィルタボタンを白カード化（背景=white、border=gray300、薄い影）で背景となじまないよう改善。
+  - 上下余白を調整し、左右幅をカード（TutorCard）と統一（spacing.md）。
+  - 視認性と一貫性を向上。
+
+- 通知（NotificationScreen）
+  - レイアウト再構成：左上に種類アイコン（丸背景なし/サイズ拡大）、中央に人物アイコン（実画像）、その下に本文、右上に時刻。
+  - 右側の矢印を削除。
+  - 未読の背景色を濃く（primary+'15'）し、左側の青い線は削除。
+  - アイテムの境界線を gray200 に変更、背景を白にして境目を明確化。
+  - 「要対応」バッジはテキスト末尾から独立した丸ピルに変更し、中央揃えで表示。
+  - ヘッダー左右の余白を統一（spacing.md）。「すべて既読」ボタンの位置・余白を調整。
+  - 人物アイコンは randomuser.me のモック画像を使用（名前に応じて割当）。
+
+影響ファイル
+
+- src/screens/LessonRequestScreen.tsx
+- src/screens/SearchScreen.tsx
+- src/screens/NotificationScreen.tsx
+- docs/requirements_diff.md（本差分）
+
+補足
+
+- モック画像URLは将来的に backend の avatar_url に差し替え可能。

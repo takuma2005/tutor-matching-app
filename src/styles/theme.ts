@@ -33,6 +33,7 @@ export const colors = {
   background: '#f3f4f6',
   surface: '#ffffff',
   surfaceLight: '#f9fafb',
+  appBackground: '#F6FAFF',
 };
 
 export const spacing = {
