@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React from 'react';
+import type { ComponentProps } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -40,7 +41,6 @@ export default function BlurTabBar({ state, descriptors, navigation }: Props) {
       {/* Tab Items */}
       <View style={styles.tabContainer}>
         {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
           const isFocused = state.index === index;
 
           const onPress = () => {
@@ -57,12 +57,13 @@ export default function BlurTabBar({ state, descriptors, navigation }: Props) {
 
           const tabName = route.name as TabName;
           const iconName = tabIcons[tabName] || 'home';
+          type IconName = ComponentProps<typeof MaterialIcons>['name'];
           const label = tabLabels[tabName] || route.name;
 
           return (
             <TouchableOpacity key={route.key} onPress={onPress} style={styles.tabItem}>
               <MaterialIcons
-                name={iconName as any}
+                name={iconName as IconName}
                 size={24}
                 color={isFocused ? colors.primary : colors.gray400}
               />

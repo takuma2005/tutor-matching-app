@@ -81,11 +81,12 @@ export function useTutorSearch(initial?: Partial<FilterOptions>) {
         case 'rating':
           return b.rating - a.rating;
         case 'recommended':
-        default:
+        default: {
           // おすすめ順: 評価が高く、授業数が多い順
           const scoreA = a.rating * 0.7 + (a.total_lessons / 100) * 0.3;
           const scoreB = b.rating * 0.7 + (b.total_lessons / 100) * 0.3;
           return scoreB - scoreA;
+        }
       }
     });
 

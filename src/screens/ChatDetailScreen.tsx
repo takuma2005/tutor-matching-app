@@ -15,6 +15,7 @@ import {
   Animated,
   Image,
   Keyboard,
+  type KeyboardEvent,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -41,12 +42,14 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   React.useEffect(() => {
-    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const onShow = (e: any) => setKeyboardHeight(e.endCoordinates?.height ?? 0);
+    const showEvt: 'keyboardWillShow' | 'keyboardDidShow' =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt: 'keyboardWillHide' | 'keyboardDidHide' =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates?.height ?? 0);
     const onHide = () => setKeyboardHeight(0);
-    const subShow = Keyboard.addListener(showEvt as any, onShow);
-    const subHide = Keyboard.addListener(hideEvt as any, onHide);
+    const subShow = Keyboard.addListener(showEvt, onShow);
+    const subHide = Keyboard.addListener(hideEvt, onHide);
     return () => {
       subShow.remove();
       subHide.remove();
