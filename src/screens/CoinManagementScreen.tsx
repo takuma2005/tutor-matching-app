@@ -212,8 +212,11 @@ export default function CoinManagementScreen({ navigation }: Props) {
   );
 
   return (
-    <ScreenContainer withScroll contentContainerStyle={{ paddingTop: 0 }}>
-      {/* Header */}
+    <ScreenContainer
+      withScroll={false}
+      contentContainerStyle={{ paddingTop: 0, paddingHorizontal: 0 }}
+    >
+      {/* Header: full-bleed white background, fixed (non-scrolling) */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />
@@ -226,6 +229,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
         </View>
       </View>
 
+      {/* Body scrollable content */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* 現在の残高 */}
         <View style={styles.balanceSection}>
