@@ -304,30 +304,31 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
       messages[index - 1]?.senderId !== item.senderId ||
       item.timestamp.getTime() - messages[index - 1]?.timestamp.getTime() > 5 * 60 * 1000; // 5分以上間隔
 
+    const sideMeta = showTimestamp ? (
+      <View style={[styles.sideMeta, isOwnMessage ? styles.sideLeft : styles.sideRight]}>
+        {isOwnMessage && <View style={styles.sideStatus}>{getMessageStatusIcon(item.status)}</View>}
+        <Text style={styles.sideTime}>{formatMessageTime(item.timestamp)}</Text>
+      </View>
+    ) : null;
+
     return (
       <View style={styles.messageContainer}>
-        <View
-          style={[styles.messageBubble, isOwnMessage ? styles.ownMessage : styles.otherMessage]}
-        >
-          <Text
-            style={[
-              styles.messageText,
-              isOwnMessage ? styles.ownMessageText : styles.otherMessageText,
-            ]}
+        <View style={[styles.messageRow, isOwnMessage ? styles.rowOwn : styles.rowOther]}>
+          {isOwnMessage && sideMeta}
+          <View
+            style={[styles.messageBubble, isOwnMessage ? styles.ownMessage : styles.otherMessage]}
           >
-            {item.text}
-          </Text>
-          {/* keep status icon inside bubble, but move time outside */}
-          {isOwnMessage && (
-            <View style={styles.messageStatus}>{getMessageStatusIcon(item.status)}</View>
-          )}
-        </View>
-        {/* timestamp outside the bubble */}
-        {showTimestamp && (
-          <View style={[styles.messageMetaRow, isOwnMessage ? styles.metaRight : styles.metaLeft]}>
-            <Text style={styles.messageTimeOutside}>{formatMessageTime(item.timestamp)}</Text>
+            <Text
+              style={[
+                styles.messageText,
+                isOwnMessage ? styles.ownMessageText : styles.otherMessageText,
+              ]}
+            >
+              {item.text}
+            </Text>
           </View>
-        )}
+          {!isOwnMessage && sideMeta}
+        </View>
       </View>
     );
   };
@@ -639,24 +640,41 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeights.normal * typography.fontSizes.md,
   },
   messageFooter: {
+    // no longer used for time/status; kept for potential future use
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     marginTop: spacing.xs / 2,
   },
-  messageMetaRow: {
-    marginTop: 2,
-  },
-  metaRight: {
+  // Row that aligns bubble and side meta (time/status)
+  messageRow: {
+    flexDirection: 'row',
     alignItems: 'flex-end',
+    columnGap: spacing.xs,
   },
-  metaLeft: {
+  rowOwn: {
+    justifyContent: 'flex-end',
+  },
+  rowOther: {
+    justifyContent: 'flex-start',
+  },
+  sideMeta: {
+    minWidth: 34,
+  },
+  sideLeft: {
+    alignItems: 'flex-end',
+    marginRight: spacing.xs / 2,
+  },
+  sideRight: {
     alignItems: 'flex-start',
+    marginLeft: spacing.xs / 2,
   },
-  messageTimeOutside: {
+  sideStatus: {
+    marginBottom: 2,
+  },
+  sideTime: {
     fontSize: typography.fontSizes.xs,
     color: colors.gray500,
-    marginTop: 2,
   },
   ownMessageText: {
     color: colors.white,
