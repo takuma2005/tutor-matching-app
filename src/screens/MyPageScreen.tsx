@@ -25,7 +25,9 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
   const { user } = useUser();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']} testID="mypage-container">
+    <SafeAreaView style={styles.container} edges={['bottom']} testID="mypage-container">
+      {/* Top safe area colorizer */}
+      <View style={{ height: insets.top, backgroundColor: colors.white }} />
       {/* ヘッダー */}
       <View style={styles.header}>
         <Text style={styles.title}>マイページ</Text>
@@ -70,7 +72,7 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 64 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 64, paddingHorizontal: spacing.md }}
         showsVerticalScrollIndicator={false}
       >
         {/* 設定メニュー */}
@@ -160,7 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.appBackground,
   },
   header: {
-    backgroundColor: colors.appBackground,
+    backgroundColor: colors.white,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -173,17 +175,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   profileCard: {
-    backgroundColor: colors.appBackground,
-    marginHorizontal: 0,
-    marginTop: 0,
-    borderRadius: 0,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.gray200,
+    backgroundColor: colors.white,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.gray200,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
   },
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.lg,
+    padding: spacing.md,
   },
   avatarContainer: {
     marginRight: spacing.md,
@@ -246,12 +253,12 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: colors.white,
     marginHorizontal: 0,
-    marginTop: spacing.sm,
+    marginTop: spacing.lg,
     padding: spacing.lg,
-    borderRadius: 0,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderRadius: borderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.gray200,
+    overflow: 'hidden',
   },
   sectionTitle: {
     fontSize: typography.sizes?.h4 || 18,

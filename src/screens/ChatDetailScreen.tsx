@@ -675,6 +675,7 @@ const styles = StyleSheet.create({
   sideTime: {
     fontSize: typography.fontSizes.xs,
     color: colors.gray500,
+    marginTop: -8,
   },
   ownMessageText: {
     color: colors.white,
