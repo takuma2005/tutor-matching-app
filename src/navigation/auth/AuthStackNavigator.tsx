@@ -19,7 +19,7 @@ export default function AuthFlow() {
     setAuthStep('phone');
   };
 
-  const handleVerificationComplete = (phone: string, code: string) => {
+  const handleVerificationComplete = (phone: string, _code: string) => {
     setPhoneNumber(phone);
     setAuthStep('profile');
   };

@@ -10,9 +10,12 @@ const UiContext = createContext<UiState | undefined>(undefined);
 export function UiProvider({ children }: { children: ReactNode }) {
   const [homeScrollY, setHomeScrollY] = useState(0);
 
-  return (
-    <UiContext.Provider value={{ homeScrollY, setHomeScrollY }}>{children}</UiContext.Provider>
+  const value = React.useMemo(
+    () => ({ homeScrollY, setHomeScrollY }),
+    [homeScrollY, setHomeScrollY],
   );
+
+  return <UiContext.Provider value={value}>{children}</UiContext.Provider>;
 }
 
 export function useUi() {

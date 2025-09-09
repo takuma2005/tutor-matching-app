@@ -17,6 +17,9 @@ type FavoritesContextType = {
   addFavorite: (tutorId: string, studentId: string) => void;
   removeFavorite: (tutorId: string) => void;
   toggleFavorite: (tutorId: string, studentId: string) => void;
+  isLoading: boolean;
+  error: string | null;
+  refreshFavorites: () => Promise<void>;
 };
 
 // ストレージキー
@@ -77,6 +80,8 @@ async function saveFavoritesToStorage(items: FavoriteTutor[]): Promise<void> {
 // プロバイダーコンポーネント
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [favorites, setFavorites] = useState<FavoriteTutor[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // 初期読み込み（ストレージ→空ならシード）
   useEffect(() => {
@@ -102,57 +107,97 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // お気に入りかどうかをチェック
-  const isFavorite = (tutorId: string) => favorites.some((fav) => fav.tutorId === tutorId);
+  const isFavorite = React.useCallback(
+    (tutorId: string) => favorites.some((fav) => fav.tutorId === tutorId),
+    [favorites],
+  );
 
   // 永続化付き更新
-  const updateAndPersist = (updater: (prev: FavoriteTutor[]) => FavoriteTutor[]) => {
-    setFavorites((prev) => {
-      const next = updater(prev);
-      // 永続化（ベストエフォート）
-      saveFavoritesToStorage(next);
-      return next;
-    });
-  };
+  const updateAndPersist = React.useCallback(
+    (updater: (prev: FavoriteTutor[]) => FavoriteTutor[]) => {
+      setFavorites((prev) => {
+        const next = updater(prev);
+        // 永続化（ベストエフォート）
+        saveFavoritesToStorage(next);
+        return next;
+      });
+    },
+    [],
+  );
 
   // お気に入りに追加
-  const addFavorite = (tutorId: string, studentId: string) => {
-    if (isFavorite(tutorId)) return; // 既に追加済みはスキップ
-    const newFavorite: FavoriteTutor = {
-      id: String(uuid.v4()),
-      tutorId,
-      studentId,
-      addedAt: new Date(),
-    };
-    updateAndPersist((prev) => [...prev, newFavorite]);
-  };
+  const addFavorite = React.useCallback(
+    (tutorId: string, studentId: string) => {
+      if (isFavorite(tutorId)) return; // 既に追加済みはスキップ
+      const newFavorite: FavoriteTutor = {
+        id: String(uuid.v4()),
+        tutorId,
+        studentId,
+        addedAt: new Date(),
+      };
+      updateAndPersist((prev) => [...prev, newFavorite]);
+    },
+    [isFavorite, updateAndPersist],
+  );
 
   // お気に入りから削除
-  const removeFavorite = (tutorId: string) => {
-    updateAndPersist((prev) => prev.filter((fav) => fav.tutorId !== tutorId));
-  };
+  const removeFavorite = React.useCallback(
+    (tutorId: string) => {
+      updateAndPersist((prev) => prev.filter((fav) => fav.tutorId !== tutorId));
+    },
+    [updateAndPersist],
+  );
 
   // お気に入りをトグル
-  const toggleFavorite = (tutorId: string, studentId: string) => {
-    if (isFavorite(tutorId)) {
-      removeFavorite(tutorId);
-    } else {
-      addFavorite(tutorId, studentId);
-    }
-  };
-
-  return (
-    <FavoritesContext.Provider
-      value={{
-        favorites,
-        isFavorite,
-        addFavorite,
-        removeFavorite,
-        toggleFavorite,
-      }}
-    >
-      {children}
-    </FavoritesContext.Provider>
+  const toggleFavorite = React.useCallback(
+    (tutorId: string, studentId: string) => {
+      if (isFavorite(tutorId)) {
+        removeFavorite(tutorId);
+      } else {
+        addFavorite(tutorId, studentId);
+      }
+    },
+    [isFavorite, removeFavorite, addFavorite],
   );
+
+  // お気に入りリストを再読み込み
+  const refreshFavorites = React.useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const loaded = await loadFavoritesFromStorage();
+      setFavorites(loaded);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '読み込みに失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const value = React.useMemo(
+    () => ({
+      isFavorite,
+      toggleFavorite,
+      addFavorite,
+      removeFavorite,
+      favorites,
+      isLoading,
+      error,
+      refreshFavorites,
+    }),
+    [
+      isFavorite,
+      toggleFavorite,
+      addFavorite,
+      removeFavorite,
+      favorites,
+      isLoading,
+      error,
+      refreshFavorites,
+    ],
+  );
+
+  return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
 }
 
 // カスタムフック

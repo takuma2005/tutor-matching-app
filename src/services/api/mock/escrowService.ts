@@ -71,7 +71,7 @@ export class MockEscrowService {
   }
 
   // 授業申請を拒否してコインを返金
-  async rejectLesson(lessonId: string, reason?: string): Promise<ApiResponse<Lesson>> {
+  async rejectLesson(lessonId: string, _reason?: string): Promise<ApiResponse<Lesson>> {
     try {
       const lesson = mockDb.lessons.find((l) => l.id === lessonId);
 
@@ -263,7 +263,7 @@ export class MockEscrowService {
   }
 
   // 授業キャンセルとコイン返金
-  async cancelLesson(lessonId: string, reason?: string): Promise<ApiResponse<Lesson>> {
+  async cancelLesson(lessonId: string, _reason?: string): Promise<ApiResponse<Lesson>> {
     try {
       const lesson = mockDb.lessons.find((l) => l.id === lessonId);
 

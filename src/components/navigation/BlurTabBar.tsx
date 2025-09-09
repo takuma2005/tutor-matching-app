@@ -27,7 +27,7 @@ type TabName = keyof typeof tabIcons;
 
 type Props = BottomTabBarProps;
 
-export default function BlurTabBar({ state, descriptors, navigation }: Props) {
+export default function BlurTabBar({ state, descriptors: _descriptors, navigation }: Props) {
   const insets = useSafeAreaInsets();
 
   return (

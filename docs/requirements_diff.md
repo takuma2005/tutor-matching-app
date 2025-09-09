@@ -113,6 +113,43 @@
 - src/services/api/mock/index.ts
 - src/contexts/UserContext.tsx
 
+### 2025-09-09（検索UI/UX整合・ナビゲーション/API型整合・パフォーマンス最適化）
+
+#### 検索UI/UX整合（SearchScreen）
+
+- 料金フィルタをRangeSlider風のプリセット選択に置換（簡易UX、誤入力防止）
+- 統計表示を追加（該当件数/平均料金/平均評価）
+- 並び替えオプションを拡張（経験順/新しい順）
+- useTutorSearchのフィルタ/ソート強化（評価/経験/地域）
+
+#### ナビゲーション/API型整合
+
+- React Navigation v7の型に合わせ、未使用パラメータを修正
+- API型のコメント強化（Supabase統合を見据える）
+
+#### パフォーマンス最適化
+
+- ContextのvalueをuseMemo化（AuthContext/FavoritesContext/UiContext）
+- 関数をuseCallback化し、依存配列を適正化
+- NotificationScreenのFlatList最適化（メモ化ソート、windowSize等）
+- useChat: RepositoryのuseMemo化、初期化負荷軽減
+
+#### ESLint/Prettier対応（品質）
+
+- 未使用変数の整理、アンダースコア付与（\_var）
+- any→unknown、タプル型の明確化
+- プロジェクト全体を整形、ESLint警告0に到達
+
+影響ファイル（主な）
+
+- src/screens/SearchScreen.tsx
+- src/hooks/useTutorSearch.ts
+- src/components/common/RangeSlider.tsx（新規）
+- src/contexts/{AuthContext.tsx,FavoritesContext.tsx,UiContext.tsx}
+- src/screens/NotificationScreen.tsx
+- src/screens/ChatScreen.tsx
+- src/components/navigation/BlurTabBar.tsx
+
 ---
 
 ## 変更履歴

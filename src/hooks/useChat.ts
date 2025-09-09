@@ -1,13 +1,13 @@
 // チャット機能用のカスタムHook
 // モック・Supabase切り替え可能な設計
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 import type {
   ChatRepository,
   ChatHookState,
   ChatHookActions,
-  TypingInfo,
+  TypingInfo as _TypingInfo,
   ChatError,
 } from '@/interfaces/ChatRepository';
 import type { Message } from '@/services/api/types';
@@ -30,7 +30,7 @@ export const useChat = ({
   repository,
 }: UseChatOptions): ChatHookState & ChatHookActions => {
   // リポジトリの初期化（実際のアプリでは環境変数で切り替え）
-  const chatRepository = repository || new MockChatRepository();
+  const chatRepository = React.useMemo(() => repository || new MockChatRepository(), [repository]);
 
   // State
   const [state, setState] = useState<ChatHookState>({

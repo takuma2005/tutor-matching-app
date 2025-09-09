@@ -16,7 +16,13 @@ import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 import ScreenContainer from '@/components/common/ScreenContainer';
 import { getApiClient } from '@/services/api/mock';
-import type { Student, Tutor, ChatRoom, Message, MessageStatus } from '@/services/api/types';
+import type {
+  Student,
+  Tutor,
+  ChatRoom,
+  Message,
+  MessageStatus as _MessageStatus,
+} from '@/services/api/types';
 // ルーム・メッセージの型は API の型を使用するためローカル定義は削除
 
 // モックチャットルームデータは不使用。APIから取得します。

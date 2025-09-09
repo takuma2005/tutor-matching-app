@@ -10,6 +10,7 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import { SearchStackParamList } from '../navigation/SearchStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import { RangeSlider } from '@/components/common/RangeSlider';
 import ScreenContainer from '@/components/common/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTutorSearch, type SortOption } from '@/hooks/useTutorSearch';
@@ -24,13 +25,24 @@ type Props = {
 export default function SearchScreen({ navigation }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user: authUser } = useAuth();
-  const { tutors, isLoading, searchText, setSearchText, filters, setFilters, sortBy, setSortBy } =
-    useTutorSearch({
-      subject: '',
-      minRate: 0,
-      maxRate: 5000,
-      onlineOnly: false,
-    });
+  const {
+    tutors,
+    isLoading,
+    searchText,
+    setSearchText,
+    filters,
+    setFilters,
+    sortBy,
+    setSortBy,
+    stats,
+    // updateFilter,
+    // resetFilters
+  } = useTutorSearch({
+    subject: '',
+    minRate: 0,
+    maxRate: 5000,
+    onlineOnly: false,
+  });
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState<'subject' | 'rate' | 'other' | 'sort'>(
     'subject',
@@ -164,41 +176,11 @@ export default function SearchScreen({ navigation }: Props) {
           )}
 
           {activeFilterTab === 'rate' && (
-            <>
-              <Text style={styles.filterTitle}>料金</Text>
-              <View style={styles.subjectTags}>
-                {[
-                  { label: '〜1200', range: [0, 1200] },
-                  { label: '1200〜1800', range: [1200, 1800] },
-                  { label: '1800〜2400', range: [1800, 2400] },
-                  { label: '2400〜', range: [2400, 999999] },
-                ].map((r) => (
-                  <TouchableOpacity
-                    key={r.label}
-                    style={[
-                      styles.subjectTag,
-                      filters.minRate === r.range[0] &&
-                        filters.maxRate === r.range[1] &&
-                        styles.subjectTagActive,
-                    ]}
-                    onPress={() =>
-                      setFilters({ ...filters, minRate: r.range[0], maxRate: r.range[1] })
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.subjectTagText,
-                        filters.minRate === r.range[0] &&
-                          filters.maxRate === r.range[1] &&
-                          styles.subjectTagTextActive,
-                      ]}
-                    >
-                      {r.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </>
+            <RangeSlider
+              minValue={filters.minRate}
+              maxValue={filters.maxRate}
+              onValueChange={(min, max) => setFilters({ ...filters, minRate: min, maxRate: max })}
+            />
           )}
 
           {activeFilterTab === 'other' && (
@@ -229,6 +211,8 @@ export default function SearchScreen({ navigation }: Props) {
                   { key: 'price_low', label: '料金安い順' },
                   { key: 'price_high', label: '料金高い順' },
                   { key: 'rating', label: '評価順' },
+                  { key: 'experience', label: '経験順' },
+                  { key: 'recent', label: '新しい順' },
                 ].map((sort) => (
                   <TouchableOpacity
                     key={sort.key}
@@ -253,7 +237,10 @@ export default function SearchScreen({ navigation }: Props) {
 
       {/* 結果ヘッダー */}
       <View style={styles.resultHeader}>
-        <Text style={styles.resultCount}>{tutors.length}人の先輩が見つかりました</Text>
+        <Text style={styles.resultCount}>
+          {stats.filteredCount}人の先輩が見つかりました（平均料金:{' '}
+          {stats.averageRate.toLocaleString()} コイン / 平均評価: {stats.averageRating}）
+        </Text>
       </View>
     </View>
   );

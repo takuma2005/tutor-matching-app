@@ -264,7 +264,16 @@ export default function NotificationScreen() {
     </TouchableOpacity>
   );
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  // パフォーマンス最適化用のメモ化
+  const sortedNotifications = useMemo(
+    () => [...notifications].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+    [notifications],
+  );
+
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.is_read).length,
+    [notifications],
+  );
 
   return (
     <ScreenContainer
@@ -297,12 +306,17 @@ export default function NotificationScreen() {
 
       {/* 通知リスト */}
       <FlatList
-        data={[...notifications].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())}
+        data={sortedNotifications}
         renderItem={renderNotification}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+        removeClippedSubviews
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={100}
+        initialNumToRender={10}
+        windowSize={10}
         ListEmptyComponent={
           <Card style={{ alignItems: 'center' }}>
             <MaterialIcons name="notifications-none" size={64} color={colors.gray300} />

@@ -11,6 +11,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, userData: Partial<User>) => Promise<boolean>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateProfile: (profileData: Partial<User>) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     initAuth();
   }, [apiClient]);
 
-  const signIn = async (userData: MockSignInInput): Promise<boolean> => {
+  const signIn = React.useCallback(async (userData: MockSignInInput): Promise<boolean> => {
     try {
       setIsLoading(true);
 
@@ -127,32 +128,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const signUp = async (
-    email: string,
-    password: string,
-    userData: Partial<User>,
-  ): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      const response = await apiClient.auth.signUp(email, password, userData);
+  const signUp = React.useCallback(
+    async (email: string, password: string, userData: Partial<User>): Promise<boolean> => {
+      try {
+        setIsLoading(true);
+        const response = await apiClient.auth.signUp(email, password, userData);
 
-      if (response.success && response.data) {
-        setUser(response.data);
-        return true;
+        if (response.success && response.data) {
+          setUser(response.data);
+          return true;
+        }
+
+        return false;
+      } catch (error) {
+        console.error('サインアップエラー:', error);
+        return false;
+      } finally {
+        setIsLoading(false);
       }
+    },
+    [apiClient],
+  );
 
-      return false;
-    } catch (error) {
-      console.error('サインアップエラー:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const signOut = async (): Promise<void> => {
+  const signOut = React.useCallback(async (): Promise<void> => {
     try {
       setIsLoading(true);
       await apiClient.auth.signOut();
@@ -163,9 +163,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [apiClient]);
 
-  const refreshUser = async (): Promise<void> => {
+  const refreshUser = React.useCallback(async (): Promise<void> => {
     if (!user) return;
 
     try {
@@ -181,17 +181,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('ユーザー情報更新エラー:', error);
     }
-  };
+  }, [user, apiClient]);
 
-  const value: AuthContextType = {
-    user,
-    student,
-    isLoading,
-    signIn,
-    signUp,
-    signOut,
-    refreshUser,
-  };
+  const updateProfile = React.useCallback(
+    async (profileData: Partial<User>): Promise<boolean> => {
+      if (!user) return false;
+
+      try {
+        setIsLoading(true);
+        // Mock implementation - in real app would call API
+        const updatedUser = { ...user, ...profileData, updated_at: new Date().toISOString() };
+        setUser(updatedUser);
+        return true;
+      } catch (error) {
+        console.error('プロフィール更新エラー:', error);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user],
+  );
+
+  const value: AuthContextType = React.useMemo(
+    () => ({
+      user,
+      student,
+      isLoading,
+      signIn,
+      signUp,
+      signOut,
+      refreshUser,
+      updateProfile,
+    }),
+    [user, student, isLoading, signIn, signUp, signOut, refreshUser, updateProfile],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

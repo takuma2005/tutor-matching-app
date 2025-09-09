@@ -38,7 +38,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
       api.coin.getBalance('student-1'),
       api.coin.getTransactionHistory('student-1', 1, 50),
     ])
-      .then(([profileResp, balanceResp, txResp]) => {
+      .then(([_profileResp, balanceResp, txResp]) => {
         if (!mounted) return;
         if (balanceResp?.success) setBalance(balanceResp.data.balance);
         if (txResp?.success) setTransactions(txResp.data);
@@ -131,7 +131,11 @@ export default function CoinManagementScreen({ navigation }: Props) {
   };
 
   const renderCoinPackage = (coinPackage: CoinPackage) => {
-    const { basePrice, savings, savingsPercent } = calculateSavings(coinPackage);
+    const {
+      basePrice: _basePrice,
+      savings: _savings,
+      savingsPercent,
+    } = calculateSavings(coinPackage);
     return (
       <TouchableOpacity
         key={coinPackage.id}

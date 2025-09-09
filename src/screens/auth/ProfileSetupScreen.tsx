@@ -28,7 +28,11 @@ export type ProfileData = {
   introduction?: string;
 };
 
-export default function ProfileSetupScreen({ role, phoneNumber, onProfileComplete }: Props) {
+export default function ProfileSetupScreen({
+  role,
+  phoneNumber: _phoneNumber,
+  onProfileComplete,
+}: Props) {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [location, setLocation] = useState('');

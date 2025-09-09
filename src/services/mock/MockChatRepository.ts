@@ -7,7 +7,7 @@ import type {
   ChatRepository,
   PaginationParams,
   TypingInfo,
-  ChatError,
+  ChatError as _ChatError,
 } from '@/interfaces/ChatRepository';
 import type { Message, ChatRoom } from '@/services/api/types';
 

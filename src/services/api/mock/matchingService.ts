@@ -210,7 +210,7 @@ export class MockMatchingService {
   }
 
   // 家庭教師がマッチング申請を拒否
-  async rejectMatchRequest(matchId: string, reason?: string): Promise<ApiResponse<MatchRequest>> {
+  async rejectMatchRequest(matchId: string, _reason?: string): Promise<ApiResponse<MatchRequest>> {
     try {
       const matchRequest = mockDb.matchRequests.find((req) => req.id === matchId);
 

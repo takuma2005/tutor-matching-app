@@ -23,5 +23,19 @@ module.exports = {
   rules: {
     'react/react-in-jsx-scope': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',
+    // パフォーマンス関連
+    'react-hooks/exhaustive-deps': 'warn',
+    'react/jsx-no-constructed-context-values': 'warn',
+    // コード品質
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+      },
+    ],
+    'prefer-const': 'error',
+    // 一般的なルール
+    'no-console': ['warn', { allow: ['warn', 'error'] }],
   },
 };

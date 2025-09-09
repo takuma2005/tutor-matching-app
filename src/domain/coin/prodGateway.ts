@@ -20,10 +20,10 @@ export class ProdCoinGateway implements CoinGateway {
   }
 
   async applyDelta(
-    userId: string,
-    amount: number,
-    reason: ChargeReason,
-    description?: string,
+    _userId: string,
+    _amount: number,
+    _reason: ChargeReason,
+    _description?: string,
   ): Promise<void> {
     // TODO: implement with production API (e.g., escrow hold/capture/refund or ledger adjustment)
     // For now, throw to make it explicit during integration testing.
