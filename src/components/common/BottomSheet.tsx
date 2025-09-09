@@ -11,6 +11,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, spacing } from '../../styles/theme';
 
@@ -22,6 +23,7 @@ interface BottomSheetProps {
 }
 
 export default function BottomSheet({ isOpen, onClose, height = 560, children }: BottomSheetProps) {
+  const insets = useSafeAreaInsets();
   const OVERDRAG = 20;
   const sheetOffset = useSharedValue(0);
 
@@ -55,7 +57,11 @@ export default function BottomSheet({ isOpen, onClose, height = 560, children }:
 
   return (
     <>
-      <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.backdrop}>
+      <Animated.View
+        entering={FadeIn}
+        exiting={FadeOut}
+        style={[styles.backdrop, { top: -insets.top, bottom: -insets.bottom }]}
+      >
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
@@ -81,6 +87,8 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.3)',
+    zIndex: 1000,
+    elevation: 10,
   },
   sheet: {
     position: 'absolute',
@@ -91,6 +99,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingBottom: spacing.lg,
+    zIndex: 1100,
+    elevation: 20,
   },
   sheetHandle: {
     alignSelf: 'center',

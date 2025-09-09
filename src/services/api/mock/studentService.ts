@@ -299,10 +299,14 @@ class MockStudentService implements StudentService {
   }
 
   // マッチング関連メソッド
-  async sendMatchRequest(tutorId: string, message: string): Promise<ApiResponse<MatchRequest>> {
+  async sendMatchRequest(
+    tutorId: string,
+    message: string,
+    scheduleNote?: string,
+  ): Promise<ApiResponse<MatchRequest>> {
     // TODO: 現在のユーザーIDを取得する方法を実装
     const studentId = 'student-1'; // 仮の実装
-    return this.matchingService.sendMatchRequest(studentId, tutorId, message);
+    return this.matchingService.sendMatchRequest(studentId, tutorId, message, scheduleNote);
   }
 
   async getMatchRequests(status?: MatchStatus): Promise<ApiResponse<MatchRequest[]>> {

@@ -12,7 +12,7 @@ import {
   Image,
 } from 'react-native';
 
-import { colors, spacing, typography, borderRadius } from '../styles/theme';
+import { colors, spacing, typography } from '../styles/theme';
 
 import ScreenContainer from '@/components/common/ScreenContainer';
 import { getApiClient } from '@/services/api/mock';
@@ -182,9 +182,6 @@ export default function ChatScreen({ navigation }: Props) {
       {/* ヘッダー */}
       <View style={styles.header}>
         <Text style={styles.title}>チャット</Text>
-        <TouchableOpacity style={styles.searchButton}>
-          <MaterialIcons name="search" size={24} color={colors.gray600} />
-        </TouchableOpacity>
       </View>
 
       {/* チャットリスト */}
@@ -225,27 +222,19 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.primary + '10',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
+    height: 56,
   },
   title: {
-    fontSize: typography.sizes?.h2 || 24,
-    fontWeight: '700',
+    fontSize: typography.fontSizes?.lg || 18,
+    fontWeight: typography.fontWeights?.semibold || '600',
     color: colors.gray900,
-  },
-  searchButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.gray100,
+    textAlign: 'center',
   },
   listContent: {
     paddingVertical: spacing.sm,

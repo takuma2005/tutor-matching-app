@@ -252,7 +252,6 @@ export default function SearchScreen({ navigation }: Props) {
     >
       <View style={styles.header}>
         <Text style={styles.title}>探す</Text>
-        <Text style={styles.subtitle}>理想の先輩を見つけよう</Text>
       </View>
 
       {isLoading ? (
@@ -285,21 +284,18 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    fontSize: typography.sizes?.h2 || 24,
-    fontWeight: '700',
+    fontSize: typography.fontSizes?.lg || 18,
+    fontWeight: typography.fontWeights?.semibold || '600',
     color: colors.gray900,
-    marginBottom: spacing.xs / 2,
-  },
-  subtitle: {
-    fontSize: typography.sizes?.caption || 12,
-    color: colors.gray600,
+    textAlign: 'center',
   },
   listContent: {
     paddingBottom: spacing.xl,

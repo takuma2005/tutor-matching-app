@@ -604,10 +604,8 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.gray100,
     marginLeft: spacing.lg,
   },
   headerTitle: {

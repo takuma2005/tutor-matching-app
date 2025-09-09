@@ -35,7 +35,6 @@ export default function HomeStackNavigator() {
         name="CoinManagement"
         component={CoinManagementScreen}
         options={{
-          presentation: 'modal',
           cardShadowEnabled: false,
           cardOverlayEnabled: false,
         }}

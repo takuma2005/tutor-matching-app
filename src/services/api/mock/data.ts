@@ -350,7 +350,32 @@ export const mockCoinTransactions: CoinTransaction[] = [
 
 // モックマッチング申請データ
 export const mockMatchRequests: MatchRequest[] = [
-  // テスト用の初期データは空で開始
+  {
+    id: 'match-1',
+    student_id: 'student-1',
+    tutor_id: '1',
+    message:
+      '数学の微積分を基礎から教えてほしいです。特に応用問題が苦手で、解法のコツを教えていただけると嬉しいです。',
+    schedule_note:
+      '週に2回、土日の午前と水曜日の午後を希望します。最初の1月は基礎から始めたいです。',
+    status: 'approved',
+    coin_cost: 300,
+    created_at: toIso(addDays(new Date(), -5)),
+    updated_at: toIso(addDays(new Date(), -4)),
+  },
+  {
+    id: 'match-2',
+    student_id: 'student-1',
+    tutor_id: '2',
+    message: '英語の会話を練習したいです。TOEICのスコアを600点以上にしたいと思っています。',
+    schedule_note:
+      'テスト前は集中的に週に3回、普段は週に1回でお願いします。平日の夜19時以降が理想です。',
+    status: 'pending',
+    coin_cost: 300,
+    created_at: toIso(addDays(new Date(), -2)),
+    updated_at: toIso(addDays(new Date(), -2)),
+    expires_at: toIso(addDays(new Date(), 5)),
+  },
 ];
 
 // モックチャットルームデータ

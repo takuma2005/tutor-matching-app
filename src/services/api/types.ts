@@ -94,6 +94,7 @@ export interface MatchRequest {
   student_id: string;
   tutor_id: string;
   message: string;
+  schedule_note?: string; // 希望日程の自由記述欄
   status: MatchStatus;
   coin_cost: number;
   created_at: string;
@@ -152,7 +153,11 @@ export interface StudentService {
   ): Promise<PaginatedResponse<Tutor>>;
 
   // マッチング関連
-  sendMatchRequest(tutorId: string, message: string): Promise<ApiResponse<MatchRequest>>;
+  sendMatchRequest(
+    tutorId: string,
+    message: string,
+    scheduleNote?: string,
+  ): Promise<ApiResponse<MatchRequest>>;
   getMatchRequests(status?: MatchStatus): Promise<ApiResponse<MatchRequest[]>>;
   cancelMatchRequest(matchId: string): Promise<ApiResponse<MatchRequest>>;
 

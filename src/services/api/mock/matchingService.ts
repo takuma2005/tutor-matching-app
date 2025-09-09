@@ -11,6 +11,7 @@ export class MockMatchingService {
     studentId: string,
     tutorId: string,
     message: string,
+    scheduleNote?: string,
   ): Promise<ApiResponse<MatchRequest>> {
     try {
       // バリデーション
@@ -65,6 +66,7 @@ export class MockMatchingService {
         student_id: studentId,
         tutor_id: tutorId,
         message: message.trim(),
+        schedule_note: scheduleNote?.trim() || undefined,
         status: 'pending',
         coin_cost: COIN_CONSTANTS.MATCHING_COST,
         created_at: now,

@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import type { StackScreenProps } from '@react-navigation/stack';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,12 @@ import {
   Platform,
 } from 'react-native';
 import type { ImageStyle } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BottomSheet from '../components/common/BottomSheet';
@@ -45,7 +51,34 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
   // マッチング申請モーダルの状態
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchMessage, setMatchMessage] = useState('');
+  const [scheduleNote, setScheduleNote] = useState('');
   const [messageError, setMessageError] = useState('');
+
+  // アニメーション用の共有値
+  const translateY = useSharedValue(300); // モーダルコンテンツの初期位置（下に隠した状態）
+
+  // モーダルアニメーション制御
+  useEffect(() => {
+    if (showMatchModal) {
+      // モーダルを表示する時は上にスライド
+      translateY.value = withSpring(0, {
+        damping: 20,
+        stiffness: 200,
+      });
+    } else {
+      // モーダルを非表示する時は下にスライド
+      translateY.value = withTiming(300, {
+        duration: 250,
+      });
+    }
+  }, [showMatchModal, translateY]);
+
+  // アニメーションスタイル
+  const animatedModalStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
 
   // データ取得
   React.useEffect(() => {
@@ -113,6 +146,7 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
 
     // メッセージ入力モーダルを表示
     setMatchMessage('');
+    setScheduleNote('');
     setMessageError('');
     setShowMatchModal(true);
   };
@@ -139,7 +173,11 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
             setIsLoading(true);
             try {
               const api = getApiClient();
-              const response = await api.student.sendMatchRequest(tutorId, matchMessage.trim());
+              const response = await api.student.sendMatchRequest(
+                tutorId,
+                matchMessage.trim(),
+                scheduleNote.trim() || undefined,
+              );
 
               if (response.success) {
                 // 残高を更新（モックデータから取得）
@@ -343,19 +381,23 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
       <Modal
         visible={showMatchModal}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setShowMatchModal(false)}
       >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+        <View style={styles.modalOverlay}>
           <TouchableOpacity
             style={styles.modalBackdrop}
             activeOpacity={1}
             onPress={() => setShowMatchModal(false)}
+          />
+          <KeyboardAvoidingView
+            style={styles.modalContainer}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
-            <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <Animated.View
+              style={[styles.modalContent, animatedModalStyle]}
+              onStartShouldSetResponder={() => true}
+            >
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>マッチング申請</Text>
                 <TouchableOpacity
@@ -396,6 +438,25 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
                     </Text>
                   )}
                 </View>
+
+                {/* 希望日程入力欄 */}
+                <Text style={styles.scheduleLabel}>希望日程（任意）</Text>
+                <Text style={styles.scheduleDescription}>
+                  どのくらいの頻度で授業を希望するか、詳細を教えてください。
+                </Text>
+                <TextInput
+                  style={styles.scheduleInput}
+                  placeholder="例）週2回・1回90分、テスト前は週3回希望"
+                  placeholderTextColor={colors.gray400}
+                  value={scheduleNote}
+                  onChangeText={setScheduleNote}
+                  multiline
+                  numberOfLines={3}
+                  maxLength={300}
+                  textAlignVertical="top"
+                  accessibilityLabel="希望する日程"
+                />
+                <Text style={styles.scheduleCharacterCount}>{scheduleNote.length}/300文字</Text>
               </View>
 
               <View style={styles.modalActions}>
@@ -423,9 +484,9 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
+            </Animated.View>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
     </ScreenContainer>
   );
@@ -448,10 +509,8 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.gray100,
   },
   headerTitle: {
     flex: 1,
@@ -677,35 +736,39 @@ const styles = StyleSheet.create({
   favoriteButton: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.gray100,
     marginRight: spacing.sm,
   },
   headerRightButton: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.gray100,
   },
   // マッチング申請モーダルのスタイル
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
   },
   modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
+    pointerEvents: 'box-none',
   },
   modalContent: {
     backgroundColor: colors.white,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     maxHeight: '80%',
+    pointerEvents: 'auto',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -725,10 +788,8 @@ const styles = StyleSheet.create({
   modalCloseButton: {
     width: 32,
     height: 32,
-    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.gray100,
   },
   modalBody: {
     paddingHorizontal: spacing.lg,
@@ -813,5 +874,35 @@ const styles = StyleSheet.create({
   },
   sendButtonTextDisabled: {
     color: colors.gray500,
+  },
+  // 希望日程入力欄用スタイル
+  scheduleLabel: {
+    fontSize: typography.sizes?.body || 16,
+    fontWeight: '600',
+    color: colors.gray900,
+    marginBottom: spacing.xs,
+    marginTop: spacing.md,
+  },
+  scheduleDescription: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray600,
+    marginBottom: spacing.md,
+    lineHeight: 18,
+  },
+  scheduleInput: {
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    fontSize: typography.sizes?.body || 16,
+    color: colors.gray900,
+    minHeight: 80,
+    maxHeight: 100,
+  },
+  scheduleCharacterCount: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray500,
+    textAlign: 'right',
+    marginTop: spacing.xs,
   },
 });

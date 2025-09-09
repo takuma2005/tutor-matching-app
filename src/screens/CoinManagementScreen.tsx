@@ -8,12 +8,7 @@ import BottomSheet from '../components/common/BottomSheet';
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 
 import ScreenContainer from '@/components/common/ScreenContainer';
-import {
-  COIN_PACKAGES,
-  calculateSavings,
-  COIN_YEN_RATE,
-  type CoinPackage,
-} from '@/constants/coinPlans';
+import { COIN_PACKAGES, calculateSavings, type CoinPackage } from '@/constants/coinPlans';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { CoinTransaction } from '@/services/api/types';
@@ -161,9 +156,6 @@ export default function CoinManagementScreen({ navigation }: Props) {
           </View>
           <Text style={styles.coinValue}>{coinPackage.coins.toLocaleString()}</Text>
           <Text style={styles.coinUnit}>コイン</Text>
-          <Text style={styles.equivalentText}>
-            約{Math.round(coinPackage.coins * COIN_YEN_RATE).toLocaleString()}円相当
-          </Text>
           {savingsPercent > 0 && <Text style={styles.savingText}>約{savingsPercent}%お得</Text>}
           {coinPackage.label && <Text style={styles.labelText}>{coinPackage.label}</Text>}
         </View>
@@ -213,6 +205,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
     <ScreenContainer
       withScroll={false}
       contentContainerStyle={{ paddingTop: 0, paddingHorizontal: 0 }}
+      bottomSpacing={spacing.xl}
     >
       {/* Header: full-bleed white background, fixed (non-scrolling) */}
       <View style={styles.header}>
@@ -220,11 +213,9 @@ export default function CoinManagementScreen({ navigation }: Props) {
           <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />
         </TouchableOpacity>
         <Text style={styles.title}>コイン管理</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerRightButton} onPress={toggleSheet}>
-            <MaterialIcons name="tune" size={24} color={colors.gray900} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.headerRightButton} onPress={toggleSheet}>
+          <MaterialIcons name="tune" size={24} color={colors.gray900} />
+        </TouchableOpacity>
       </View>
 
       {/* Body scrollable content */}
@@ -232,6 +223,9 @@ export default function CoinManagementScreen({ navigation }: Props) {
         {/* 現在の残高 */}
         <View style={styles.balanceSection}>
           <View style={styles.balanceCard}>
+            <View style={styles.balanceIconContainer}>
+              <MaterialIcons name="account-balance-wallet" size={32} color={colors.primary} />
+            </View>
             <Text style={styles.balanceTitle}>現在の残高</Text>
             <Text style={styles.balanceAmount}>{(balance ?? 0).toLocaleString()}コイン</Text>
           </View>
@@ -248,7 +242,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
         </View>
 
         {/* 取引履歴 */}
-        <View style={styles.section}>
+        <View style={[styles.section, styles.historySection]}>
           <Text style={styles.sectionTitle}>取引履歴</Text>
           <View style={styles.historyContainer}>
             {transactions.slice(0, 8).map((transaction, index) => (
@@ -289,18 +283,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    height: 60,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },
   backButton: {
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.md,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.gray100,
   },
   title: {
     flex: 1,
@@ -308,10 +299,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.gray900,
     textAlign: 'center',
-    marginHorizontal: spacing.md,
-  },
-  headerRight: {
-    width: 40,
   },
   scrollView: {
     flex: 1,
@@ -322,26 +309,46 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   balanceCard: {
-    backgroundColor: colors.primary + '10',
+    backgroundColor: colors.white,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    ...shadows.sm,
   },
   balanceTitle: {
     fontSize: typography.sizes?.body || 16,
-    color: colors.gray700,
-    marginTop: spacing.sm,
+    color: colors.gray600,
     marginBottom: spacing.xs,
   },
   balanceAmount: {
     fontSize: 28,
     fontWeight: '700',
     color: colors.primary,
+    marginBottom: spacing.xs / 2,
+  },
+  balanceIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  balanceEquivalent: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray500,
   },
   section: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.lg,
+  },
+  historySection: {
+    paddingTop: 0,
+    paddingBottom: spacing.md,
   },
   sectionTitle: {
     fontSize: typography.sizes?.h4 || 18,
@@ -358,29 +365,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginTop: spacing.md,
+    gap: spacing.sm,
   },
   packagesSection: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
   packageCard: {
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray200,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
     width: '48%',
-    minHeight: 220,
+    minHeight: 200,
     alignItems: 'center',
     justifyContent: 'space-between',
     position: 'relative',
     overflow: 'visible',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     ...shadows.sm,
   },
   popularPackage: {
     borderColor: colors.primary,
+    borderWidth: 2,
   },
   selectedPackage: {
     borderColor: colors.primary,
@@ -470,21 +478,24 @@ const styles = StyleSheet.create({
   },
   historyContainer: {
     backgroundColor: colors.white,
-    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    ...shadows.sm,
   },
   transactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.md,
-    paddingHorizontal: 0,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.gray100,
   },
   transactionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.gray100,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.gray50,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -523,9 +534,7 @@ const styles = StyleSheet.create({
   headerRightButton: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.gray100,
   },
 });

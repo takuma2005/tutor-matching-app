@@ -59,7 +59,7 @@ const prodApiClient = {
       pagination: { page: 1, limit: 0, total: 0, has_more: false },
     }),
     // マッチング関連（本番スタブ）
-    sendMatchRequest: async (_tutorId: string, _message: string) =>
+    sendMatchRequest: async (_tutorId: string, _message: string, _scheduleNote?: string) =>
       notImplemented('student.sendMatchRequest'),
     getMatchRequests: async (_status?: unknown) => ({ success: true, data: [] }),
     cancelMatchRequest: async (_matchId: string) => notImplemented('student.cancelMatchRequest'),

@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   topBorder: {
-    height: StyleSheet.hairlineWidth,
+    height: 1,
     backgroundColor: colors.gray200,
   },
   tabContainer: {

@@ -4,12 +4,11 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 import ScreenContainer, { ScreenContainerProps } from '@/components/common/ScreenContainer';
-import { colors, spacing, typography, borderRadius } from '@/styles/theme';
+import { colors, spacing, typography } from '@/styles/theme';
 
 export interface StandardScreenProps extends Omit<ScreenContainerProps, 'children'> {
   navigation?: StackNavigationProp<Record<string, object | undefined>, string>;
   title: string;
-  subtitle?: string;
   showBackButton?: boolean;
   rightActions?: React.ReactNode;
   children: React.ReactNode;
@@ -19,7 +18,6 @@ export interface StandardScreenProps extends Omit<ScreenContainerProps, 'childre
 export default function StandardScreen({
   navigation,
   title,
-  subtitle,
   showBackButton = true,
   rightActions,
   children,
@@ -50,17 +48,16 @@ export default function StandardScreen({
     >
       {/* 標準ヘッダー */}
       <View style={styles.header}>
-        {showBackButton ? (
-          <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-            <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.headerSpacer} />
-        )}
+        <View style={styles.headerLeft}>
+          {showBackButton ? (
+            <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+              <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
 
-        <View style={styles.headerContent}>
+        <View style={styles.titleContainer}>
           <Text style={styles.title}>{title}</Text>
-          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
         </View>
 
         <View style={styles.headerRight}>{rightActions}</View>
@@ -77,40 +74,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
+    height: 56, // 統一されたヘッダー高さ
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },
+  headerLeft: {
+    width: 56, // 固定幅で左右のバランスを統一
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  titleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerRight: {
+    width: 56, // 固定幅で左右のバランスを統一
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.gray100,
-    marginRight: spacing.md,
-  },
-  headerSpacer: {
-    width: 40,
-    marginRight: spacing.md,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerRight: {
-    minWidth: 40,
-    alignItems: 'flex-end',
   },
   title: {
-    fontSize: typography.fontSizes.xxl || 28,
-    fontWeight: typography.fontWeights.bold,
+    fontSize: typography.fontSizes.lg || 18,
+    fontWeight: typography.fontWeights.semibold,
     color: colors.gray900,
-    marginBottom: spacing.xs / 2,
-  },
-  subtitle: {
-    fontSize: typography.fontSizes.sm || 14,
-    color: colors.gray600,
+    textAlign: 'center',
   },
 });

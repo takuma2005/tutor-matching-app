@@ -399,6 +399,37 @@
 
 #### チャット機能品質向上（擬似リアルタイム）
 
+### 2025-09-09（マッチング申請画面改善）
+
+#### モーダルアニメーション改善
+
+- **背景アニメーション**: `animationType="slide"` から `"fade"` に変更
+- **React Native Reanimated 導入**: モーダルコンテンツのみ下からスライドアップ
+- **レイアウト改善**: 背景とコンテンツを分離、背景は固定位置
+
+#### 希望日程入力機能追加
+
+- **API 型定義拡張**: MatchRequest に `schedule_note?: string` 追加
+- **モック API 拡張**:
+  - sendMatchRequest に scheduleNote パラメータ追加
+  - テストデータにダミー値追加
+- **UI 改善**:
+  - TutorDetailScreen: メッセージ入力欄の下に multiline TextInput 追加
+  - プレースホルダー: 「例）週2回・1回90分、テスト前は週3回希望」
+  - 文字数制限: 300文字
+  - 文字数カウンタとアクセシビリティ対応
+- **表示改善**: MatchRequestsScreen で希望日程の表示対応
+
+影響ファイル（主な）
+
+- src/services/api/types.ts
+- src/services/api/mock/matchingService.ts
+- src/services/api/mock/studentService.ts
+- src/services/api/mock/index.ts
+- src/services/api/mock/data.ts
+- src/screens/TutorDetailScreen.tsx
+- src/screens/MatchRequestsScreen.tsx
+
 - **インターフェース設計**: `src/interfaces/ChatRepository.ts` 新規作成
   - ChatRepository抽象化（モック→Supabase切替準備）
   - PaginationParams, TypingInfo型定義
@@ -586,5 +617,103 @@
 - TypeScript: ✅ コンパイルエラー0
 - ESLint: ✅ エラー・警告0
 - UI一貫性: ✅ セーフエリア完全統一
+
+### 2025-01-09（UI一貫性向上プロジェクト完了：ヘッダー統一・レイアウト最適化・タブデザイン統一）
+
+#### 背景・目的
+
+- **問題**: 画面間でヘッダーデザインが不統一、タブUIがバラバラ、モーダル背景表示不具合
+- **解決**: 3画面（コイン管理・申請状況・授業）でUI統一、一貫したユーザー体験を実現
+
+#### コイン管理画面レイアウト最適化
+
+- **残高カード改善**:
+  - 縦パディング削減: `spacing.lg` → `spacing.md` でコンパクト化
+  - 円相当表示削除: 残高カードとコイン購入パッケージから「何円相当」テキスト削除
+  - アイコンサイズ調整: 56×56px → 48×48px
+  - フォントサイズ調整: 32px → 28px で視覚的バランス向上
+
+- **スペース調整**:
+  - ヘッダー下余白最適化: `balanceSection`の`paddingTop`を0に設定
+  - 取引履歴セクション: 上余白0、下余白`spacing.md`に調整
+  - `bottomSpacing`を`spacing.xl`で下部余白確保
+
+#### BottomSheetモーダル背景修正
+
+- **セーフエリア対応**: `useSafeAreaInsets`導入でステータスバー領域まで背景オーバーレイを拡張
+- **zIndex最適化**: backdrop(1000) < sheet(1100)で適切な重ね順確保
+- **全画面カバー**: `top: -insets.top`, `bottom: -insets.bottom`で完全な背景オーバーレイ
+
+#### ヘッダーUI統一（3画面共通）
+
+- **共通構造**: 左(戻るボタン) | 中央(タイトル) | 右(アクションボタン)
+- **統一スタイル**:
+  ```tsx
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,     // 24px
+    paddingVertical: spacing.md,       // 16px
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  }
+  ```
+- **ボタン規格**: 40×40px統一
+- **タイトル規格**: h3サイズ(20px), フォントウェイト600, 中央揃え
+
+#### コンポーネント移行
+
+- **申請状況画面**: 独自ヘッダー → 統一3分割ヘッダー
+- **授業画面**: `StandardScreen` → `ScreenContainer`で直接制御
+- **ナビゲーション変更**: CoinManagement画面をモーダル → 通常プッシュ遷移
+
+#### タブUI統一
+
+- **デザイン統一**:
+
+  ```tsx
+  tabContainer: {
+    backgroundColor: colors.gray50,
+    marginHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+  }
+  ```
+
+- **アクティブ状態**: `colors.primary`背景 + 白文字
+- **非アクティブ状態**: 透明背景 + グレー文字
+- **適用画面**: 申請状況画面、授業画面
+
+#### レイアウト改善
+
+- **ScreenContainer統一**: 全画面で`{ paddingHorizontal: 0, paddingTop: 0 }`
+- **bottomSpacing**: `spacing.xl`で適切な下部余白確保
+- **タブ分離**: ヘッダーからタブを独立セクションに移動（申請状況画面）
+
+#### 品質保証
+
+- ✅ **UI一貫性**: 3画面でヘッダー・タブデザイン完全統一
+- ✅ **レスポンシブ**: SafeAreaInsets対応でデバイス間一貫性確保
+- ✅ **アクセシビリティ**: 適切なタッチターゲットサイズ(40×40px)維持
+- ✅ **パフォーマンス**: 不要な背景オーバーレイ削減
+
+#### 影響ファイル
+
+**修正:**
+
+- src/screens/CoinManagementScreen.tsx（レイアウト最適化）
+- src/screens/MatchRequestsScreen.tsx（ヘッダー統一・タブ改善）
+- src/screens/LessonScreen.tsx（ヘッダー統一・StandardScreen移行）
+- src/components/common/BottomSheet.tsx（背景修正）
+- src/navigation/HomeStackNavigator.tsx（遷移変更）
+
+**実装品質:**
+
+- UI一貫性: ✅ 3画面完全統一
+- 視覚的改善: ✅ コンパクトレイアウト達成
+- モーダル品質: ✅ 背景表示不具合完全解決
 
 ---

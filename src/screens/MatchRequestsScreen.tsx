@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -20,6 +20,7 @@ import type { MatchRequest, Tutor } from '@/services/api/types';
 import { colors, spacing, typography, borderRadius } from '@/styles/theme';
 
 export default function MatchRequestsScreen() {
+  const navigation = useNavigation();
   const [matchRequests, setMatchRequests] = useState<(MatchRequest & { tutor?: Tutor })[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -151,6 +152,15 @@ export default function MatchRequestsScreen() {
         {item.message}
       </Text>
 
+      {item.schedule_note && (
+        <>
+          <Text style={styles.scheduleLabel}>希望日程:</Text>
+          <Text style={styles.scheduleNote} numberOfLines={2}>
+            {item.schedule_note}
+          </Text>
+        </>
+      )}
+
       <View style={styles.requestFooter}>
         <View style={styles.requestMeta}>
           <Text style={styles.metaText}>申請日: {formatDate(item.created_at)}</Text>
@@ -206,7 +216,13 @@ export default function MatchRequestsScreen() {
       contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
     >
       <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />
+        </TouchableOpacity>
         <Text style={styles.title}>マッチング申請</Text>
+        <TouchableOpacity style={styles.headerRightButton} onPress={handleRefresh}>
+          <MaterialIcons name="refresh" size={24} color={colors.gray900} />
+        </TouchableOpacity>
       </View>
 
       {/* タブ */}
@@ -246,16 +262,32 @@ const styles = StyleSheet.create({
     backgroundColor: colors.appBackground,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   title: {
-    fontSize: typography.sizes?.h2 || 24,
-    fontWeight: '700',
+    flex: 1,
+    fontSize: typography.sizes?.h3 || 20,
+    fontWeight: '600',
     color: colors.gray900,
+    textAlign: 'center',
+  },
+  headerRightButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -264,26 +296,34 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    backgroundColor: colors.gray50,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   tab: {
     flex: 1,
     paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   tabText: {
     fontSize: typography.sizes?.body || 16,
-    color: colors.gray600,
+    color: colors.gray700,
     fontWeight: '500',
   },
   activeTabText: {
-    color: colors.primary,
+    color: colors.white,
     fontWeight: '600',
   },
   listContent: {
@@ -386,5 +426,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
     lineHeight: 24,
+  },
+  scheduleLabel: {
+    fontSize: typography.sizes?.caption || 12,
+    fontWeight: '600',
+    color: colors.gray700,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs / 2,
+  },
+  scheduleNote: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray600,
+    lineHeight: 16,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.gray50,
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
   },
 });

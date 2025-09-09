@@ -9,7 +9,7 @@ import { mockApiClient } from '../services/api/mock';
 import { Lesson, Tutor } from '../services/api/types';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
-import ScreenContainer from '@/components/common/ScreenContainer';
+import StandardScreen from '@/components/templates/StandardScreen';
 
 type LessonHistoryScreenNavigationProp = StackNavigationProp<ChatStackParamList, 'LessonHistory'>;
 type LessonHistoryScreenRouteProp = RouteProp<ChatStackParamList, 'LessonHistory'>;
@@ -19,7 +19,7 @@ interface Props {
   route: LessonHistoryScreenRouteProp;
 }
 
-const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
+const LessonHistoryScreen: React.FC<Props> = ({ route }) => {
   const { tutorId } = route.params;
   const [lessons, setLessons] = React.useState<Lesson[]>([]);
   const [tutor, setTutor] = React.useState<Tutor | null>(null);
@@ -174,20 +174,7 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <ScreenContainer
-      withScroll={false}
-      contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>{tutor?.name || '講師'}さんとの授業履歴</Text>
-          <Text style={styles.subtitle}>申請済み・完了済みの授業</Text>
-        </View>
-      </View>
-
+    <StandardScreen title={`${tutor?.name || '講師'}さんとの授業履歴`} showBackButton>
       {/* タブ */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -233,47 +220,11 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         }
       />
-    </ScreenContainer>
+    </StandardScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.appBackground,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.gray100,
-    marginRight: spacing.md,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  title: {
-    fontSize: typography.fontSizes.xxl || 28,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.gray900,
-    marginBottom: spacing.xs / 2,
-  },
-  subtitle: {
-    fontSize: typography.fontSizes.sm || 14,
-    color: colors.gray600,
-  },
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: colors.gray50,

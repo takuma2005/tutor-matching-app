@@ -1,8 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Image } from 'react-native';
-
-import { colors, spacing, typography, borderRadius } from '../styles/theme';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Image } from 'react-native';
 
 import Card from '@/components/common/Card';
 import ScreenContainer from '@/components/common/ScreenContainer';
@@ -11,6 +9,7 @@ import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import { MockEscrowService } from '@/services/api/mock/escrowService';
 import type { Tutor } from '@/services/api/types';
+import { colors, spacing, typography, borderRadius } from '@/styles/theme';
 
 type LessonStatus =
   | 'pending'
@@ -350,12 +349,18 @@ export default function LessonScreen() {
     <ScreenContainer
       withScroll={false}
       contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
+      bottomSpacing={spacing.xl}
     >
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>授業</Text>
-        <Text style={styles.subtitle}>予約の管理と履歴</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => {}}>
+          <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>授業</Text>
+        <TouchableOpacity style={styles.headerRightButton} onPress={() => {}}>
+          <MaterialIcons name="refresh" size={24} color={colors.gray900} />
+        </TouchableOpacity>
       </View>
-
       {/* タブ */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -408,56 +413,64 @@ export default function LessonScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.appBackground,
-  },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
+    paddingVertical: spacing.md,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },
-  title: {
-    fontSize: typography.fontSizes.xxl || 28,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.gray900,
-    marginBottom: spacing.xs / 2,
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  subtitle: {
-    fontSize: typography.fontSizes.sm || 14,
-    color: colors.gray600,
+  headerTitle: {
+    flex: 1,
+    fontSize: typography.sizes?.h3 || 20,
+    fontWeight: '600',
+    color: colors.gray900,
+    textAlign: 'center',
+  },
+  headerRightButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: colors.gray50,
-    margin: spacing.lg,
+    marginHorizontal: spacing.md, // リストと左右余白を揃える
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
     borderRadius: borderRadius.lg,
     padding: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   tab: {
     flex: 1,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm, // コンパクトに調整
     borderRadius: borderRadius.md,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   activeTab: {
-    backgroundColor: colors.white,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: colors.primary, // アクティブはプライマリで視認性向上
+    borderColor: colors.primary,
   },
   tabText: {
     fontSize: typography.fontSizes.sm || 14,
-    color: colors.gray600,
+    color: colors.gray700,
     fontWeight: typography.fontWeights.medium,
   },
   activeTabText: {
-    color: colors.primary,
+    color: colors.white,
     fontWeight: typography.fontWeights.semibold,
   },
   listContent: {
@@ -557,8 +570,8 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
   },
   completeButton: {
     backgroundColor: colors.primary,
