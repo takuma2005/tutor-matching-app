@@ -327,7 +327,7 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
 
   return (
     <ScreenContainer
-      topInsetBackgroundColor={colors.white}
+      withScroll={false}
       contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
     >
       {/* ヘッダー */}

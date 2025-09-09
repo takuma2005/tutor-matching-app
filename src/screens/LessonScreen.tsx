@@ -433,9 +433,7 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: colors.gray50,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.lg,
-    marginBottom: spacing.lg,
+    margin: spacing.lg,
     borderRadius: borderRadius.lg,
     padding: spacing.xs,
   },

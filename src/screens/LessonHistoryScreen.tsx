@@ -174,7 +174,10 @@ const LessonHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <ScreenContainer withScroll={false}>
+    <ScreenContainer
+      withScroll={false}
+      contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
+    >
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <MaterialIcons name="arrow-back" size={24} color={colors.gray900} />

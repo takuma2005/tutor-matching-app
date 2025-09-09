@@ -51,7 +51,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   }
 
   return (
-    <ScreenContainer withScroll contentContainerStyle={{ paddingTop: 0 }}>
+    <ScreenContainer withScroll contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}>
       {/* ヘッダー */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>

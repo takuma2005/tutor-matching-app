@@ -4,8 +4,8 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { StandardScreen } from '../components/templates';
 import { useUser } from '../contexts/UserContext';
 import type { HomeStackParamList } from '../navigation/HomeStackNavigator';
 import type { MyPageStackParamList } from '../navigation/MyPageStackNavigator';
@@ -21,18 +21,10 @@ type MyPageNav = CompositeNavigationProp<
 >;
 
 export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) {
-  const insets = useSafeAreaInsets();
   const { user } = useUser();
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']} testID="mypage-container">
-      {/* Top safe area colorizer */}
-      <View style={{ height: insets.top, backgroundColor: colors.white }} />
-      {/* ヘッダー */}
-      <View style={styles.header}>
-        <Text style={styles.title}>マイページ</Text>
-      </View>
-
+    <StandardScreen title="マイページ" showBackButton={false}>
       {/* プロフィールカード */}
       <View style={styles.profileCard} testID="profile-card">
         <View style={styles.profileHeader}>
@@ -72,7 +64,7 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 64, paddingHorizontal: spacing.md }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* 設定メニュー */}
@@ -152,27 +144,17 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
         {/* 底部余白 */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </SafeAreaView>
+    </StandardScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
-    backgroundColor: colors.appBackground,
   },
-  header: {
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.gray200,
-  },
-  title: {
-    fontSize: typography.sizes?.h2 || 24,
-    fontWeight: '700',
-    color: colors.gray900,
-    textAlign: 'center',
+  scrollContent: {
+    paddingBottom: spacing.xl * 2,
+    paddingHorizontal: spacing.md,
   },
   profileCard: {
     backgroundColor: colors.white,
@@ -246,9 +228,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  scrollView: {
-    flex: 1,
   },
   section: {
     backgroundColor: colors.white,

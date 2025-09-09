@@ -11,7 +11,6 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useUser } from '../../contexts/UserContext';
 import type { MyPageStackParamList } from '../../navigation/MyPageStackNavigator';
@@ -141,17 +140,17 @@ export default function ProfileEditScreen({ navigation }: ProfileEditScreenProps
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>読み込み中...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <ScreenContainer withScroll contentContainerStyle={{ paddingTop: 0 }}>
+    <ScreenContainer withScroll contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0 }}>
       {/* ヘッダー */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
