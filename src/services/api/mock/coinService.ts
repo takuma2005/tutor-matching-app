@@ -139,38 +139,11 @@ class MockCoinService implements CoinService {
     return [...this.transactions];
   }
 
-  // コイン購入パッケージの定義（UI で使用）
+  // コイン購入パッケージの定義（constants/coinPlans.ts から取得）
   getCoinPackages() {
-    return [
-      {
-        id: 'package-100',
-        coins: 100,
-        price: 1000, // 円
-        bonus: 0,
-        popular: false,
-      },
-      {
-        id: 'package-500',
-        coins: 500,
-        price: 4500, // 10%お得
-        bonus: 50,
-        popular: true,
-      },
-      {
-        id: 'package-1000',
-        coins: 1000,
-        price: 8500, // 15%お得
-        bonus: 150,
-        popular: false,
-      },
-      {
-        id: 'package-2000',
-        coins: 2000,
-        price: 16000, // 20%お得
-        bonus: 400,
-        popular: false,
-      },
-    ];
+    // コンスタンツファイルからインポートすることを推奨
+    const { COIN_PACKAGES } = require('@/constants/coinPlans');
+    return COIN_PACKAGES;
   }
 }
 

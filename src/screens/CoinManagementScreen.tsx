@@ -8,24 +8,17 @@ import BottomSheet from '../components/common/BottomSheet';
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 
 import ScreenContainer from '@/components/common/ScreenContainer';
+import {
+  COIN_PACKAGES,
+  calculateSavings,
+  COIN_YEN_RATE,
+  type CoinPackage,
+} from '@/constants/coinPlans';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { CoinTransaction } from '@/services/api/types';
 
-type CoinPackage = {
-  id: string;
-  coins: number;
-  price: number;
-  bonus?: number;
-  popular?: boolean;
-};
-
-const coinPackages: CoinPackage[] = [
-  { id: 'p1', coins: 400, price: 490 },
-  { id: 'p2', coins: 1250, price: 1480, popular: true },
-  { id: 'p3', coins: 4300, price: 4900 },
-  { id: 'p4', coins: 8800, price: 9800 },
-];
+// コイン購入パッケージは constants/coinPlans.ts から取得
 
 type Props = {
   navigation: NavigationProp<ParamListBase>;
@@ -138,9 +131,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
   };
 
   const renderCoinPackage = (coinPackage: CoinPackage) => {
-    const baseline = Math.round(coinPackage.coins * 1.2);
-    const saving = baseline - coinPackage.price;
-    const percent = saving > 0 ? Math.round((saving / baseline) * 100) : 0;
+    const { basePrice, savings, savingsPercent } = calculateSavings(coinPackage);
     return (
       <TouchableOpacity
         key={coinPackage.id}
@@ -166,8 +157,11 @@ export default function CoinManagementScreen({ navigation }: Props) {
           </View>
           <Text style={styles.coinValue}>{coinPackage.coins.toLocaleString()}</Text>
           <Text style={styles.coinUnit}>コイン</Text>
-          {saving > 0 && <Text style={styles.savingText}>約{percent}%お得</Text>}
-          {coinPackage.bonus && <Text style={styles.bonusText}>+{coinPackage.bonus} ボーナス</Text>}
+          <Text style={styles.equivalentText}>
+            約{Math.round(coinPackage.coins * COIN_YEN_RATE).toLocaleString()}円相当
+          </Text>
+          {savingsPercent > 0 && <Text style={styles.savingText}>約{savingsPercent}%お得</Text>}
+          {coinPackage.label && <Text style={styles.labelText}>{coinPackage.label}</Text>}
         </View>
 
         <TouchableOpacity
@@ -246,7 +240,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
             マッチング申請や授業予約にコインをご利用ください
           </Text>
 
-          <View style={styles.packagesGrid}>{coinPackages.map(renderCoinPackage)}</View>
+          <View style={styles.packagesGrid}>{COIN_PACKAGES.map(renderCoinPackage)}</View>
         </View>
 
         {/* 取引履歴 */}
@@ -433,10 +427,22 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontWeight: '500',
   },
+  equivalentText: {
+    marginTop: spacing.xs / 2,
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray500,
+    fontWeight: '400',
+  },
   savingText: {
     marginTop: spacing.xs,
     fontSize: typography.sizes?.caption || 12,
     color: colors.success,
+    fontWeight: '600',
+  },
+  labelText: {
+    marginTop: spacing.xs / 2,
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.primary,
     fontWeight: '600',
   },
   priceButton: {

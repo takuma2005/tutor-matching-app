@@ -3,6 +3,8 @@ import uuid from 'react-native-uuid';
 import type { ApiResponse, Lesson, CoinTransaction } from '../types';
 import { mockDb } from './data';
 
+import { COIN_CONSTANTS } from '@/constants/coinPlans';
+
 export class MockEscrowService {
   // 授業申請を承認してエスクローを開始
   async approveLesson(lessonId: string): Promise<ApiResponse<Lesson>> {
@@ -200,8 +202,8 @@ export class MockEscrowService {
         };
       }
 
-      // プラットフォーム手数料を計算（15%）
-      const platformFee = Math.floor(lesson.coin_cost * 0.15);
+      // プラットフォーム手数料を計算（requirements.md に従い 15%）
+      const platformFee = Math.floor(lesson.coin_cost * COIN_CONSTANTS.PLATFORM_FEE_RATE);
       const tutorAmount = lesson.coin_cost - platformFee;
 
       // 家庭教師にコインを送金（実際のシステムでは家庭教師アカウントに送金）

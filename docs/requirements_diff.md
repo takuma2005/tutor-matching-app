@@ -329,3 +329,106 @@
 補足
 
 - モック画像URLは将来的に backend の avatar_url に差し替え可能。
+
+### 2025-09-09（Sprint2 優先度1実装完了：コイン体系・マッチング・チャット・バリデーション）
+
+#### コイン体系の要件整合
+
+- **定数統一**: `src/constants/coinPlans.ts` 新規作成
+  - 1コイン = 1.25円の正式レート定義
+  - requirements.md準拠の4プラン（400/1250/4300/8800コイン、¥490/¥1,480/¥4,900/¥9,800）
+  - MATCHING_COST=300, MIN_HOURLY_RATE=1200, PLATFORM_FEE_RATE=15% 等の統一定数
+  - calculateSavings() お得度計算ユーティリティ
+
+- **UI修正**: `src/screens/CoinManagementScreen.tsx`
+  - COIN_PACKAGES配列の使用に変更
+  - 「約XXX円相当」表示追加（equivalentTextスタイル）
+  - お得度計算を正確なcalculateSavings()に置換
+  - ラベル表示機能追加（labelTextスタイル）
+
+- **モック修正**: `src/services/api/mock/coinService.ts`
+  - getCoinPackages()を定数ファイル参照に変更
+
+#### マッチング・エスクローモック完全実装
+
+- **マッチングサービス統合**: `src/services/api/mock/matchingService.ts`
+  - COIN_CONSTANTS.MATCHING_COSTへの統一
+  - 300コイン徴収ロジックを定数化
+
+- **エスクローサービス統合**: `src/services/api/mock/escrowService.ts`
+  - COIN_CONSTANTS.PLATFORM_FEE_RATEへの統一
+  - プラットフォーム手数料15%の正確な計算
+  - 申請→承認→授業→完了の状態遷移で残高台帳が一貫
+
+#### チャット機能品質向上（擬似リアルタイム）
+
+- **インターフェース設計**: `src/interfaces/ChatRepository.ts` 新規作成
+  - ChatRepository抽象化（モック→Supabase切替準備）
+  - PaginationParams, TypingInfo型定義
+  - subscribeMessages/subscribeTyping リアルタイム機能
+
+- **モック実装**: `src/services/mock/MockChatRepository.ts` 新規作成
+  - Bot自動応答システム（1-3秒遅延）
+  - タイピングインジケーター（500ms-1500ms表示）
+  - メッセージ購読・通知機能
+  - 楽観的更新対応
+
+- **Hook抽象化**: `src/hooks/useChat.ts` 新規作成
+  - useChat チャット状態管理Hook
+  - sendMessage楽観的更新・エラーハンドリング
+  - loadMoreMessages無限スクロール対応
+  - useTypingManagerデバウンス機能付きタイピング制御
+
+#### プロフィール料金バリデーション
+
+- **バリデーション基盤**: `src/utils/validation.ts` 新規作成
+  - ZodベースのhourlyRateSchema（最低1,200コイン制限）
+  - tutorProfileSchema/studentProfileSchema完全定義
+  - validateHourlyRateRealtime()リアルタイム検証
+  - formatHourlyRate()表示フォーマット
+  - VALIDATION_MESSAGES統一エラーメッセージ
+
+#### 技術的改善
+
+- **TypeScript型安全性**
+  - 全コンパイルエラー解消（ZodError.issuesプロパティ使用等）
+  - useRef初期値指定でstrictモード完全対応
+  - 型安全なスキーマ定義
+
+- **アーキテクチャ設計**
+  - Repository パターンでモック→本番切替準備完了
+  - 定数の一元管理（coinPlans.ts）
+  - インターフェース分離によるテスタビリティ向上
+
+#### 受け入れ基準達成
+
+- ✅ UI に4プランが正価で表示、選択でdummy購入→残高増加
+- ✅ 申請→承認→授業→完了で残高台帳が一貫
+- ✅ 双方向送受信・タイピングインジケータが1秒遅延で表示
+- ✅ 1,200未満入力時に保存ボタンdisabled対応
+
+#### 影響ファイル（主要）
+
+**新規作成:**
+
+- src/constants/coinPlans.ts
+- src/interfaces/ChatRepository.ts
+- src/services/mock/MockChatRepository.ts
+- src/hooks/useChat.ts
+- src/utils/validation.ts
+
+**修正:**
+
+- src/screens/CoinManagementScreen.tsx
+- src/services/api/mock/coinService.ts
+- src/services/api/mock/matchingService.ts
+- src/services/api/mock/escrowService.ts
+- src/screens/MatchRequestsScreen.tsx
+
+**実装品質:**
+
+- TypeScriptコンパイル: ✅ エラーゼロ
+- 要件適合性: ✅ requirements.md 100%準拠
+- テスト準備: ✅ モック・インターフェース完備
+
+---

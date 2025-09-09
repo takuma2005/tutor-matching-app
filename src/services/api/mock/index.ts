@@ -33,9 +33,6 @@ export const API_CONFIG = {
   },
 };
 
-// 環境設定用のヘルパー関数
-let __mockLogPrinted = false;
-
 // 最小限の本番用スタブクライアント（未実装でもアプリが落ちないように）
 const notImplemented = (name: string) => {
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
@@ -103,20 +100,7 @@ const prodApiClient = {
 };
 
 export const getApiClient = () => {
-  if (API_CONFIG.USE_MOCK) {
-    if (typeof __DEV__ !== 'undefined' && __DEV__ && !__mockLogPrinted) {
-      console.log('🧪 Using Mock API Client');
-      __mockLogPrinted = true;
-    }
-    return mockApiClient;
-  } else {
-    if (typeof __DEV__ !== 'undefined' && __DEV__ && !__mockLogPrinted) {
-      console.log('🌐 Using Production API Client (stub)');
-      __mockLogPrinted = true;
-    }
-    // 暫定：本番未実装でもスタブを返してアプリを継続させる
-    return prodApiClient;
-  }
+  return API_CONFIG.USE_MOCK ? mockApiClient : prodApiClient;
 };
 
 export default mockApiClient;

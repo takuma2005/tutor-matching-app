@@ -43,8 +43,8 @@ export default function MatchRequestsScreen() {
 
         setMatchRequests(requestsWithTutors);
       }
-    } catch {
-      console.error('Failed to load match requests:', error);
+    } catch (err) {
+      console.error('Failed to load match requests:', err);
       Alert.alert('エラー', 'マッチング申請の読み込みに失敗しました。');
     } finally {
       setIsLoading(false);

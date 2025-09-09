@@ -3,7 +3,7 @@ import uuid from 'react-native-uuid';
 import type { ApiResponse, MatchRequest, MatchStatus, CoinTransaction } from '../types';
 import { mockDb } from './data';
 
-const MATCHING_COST = 300;
+import { COIN_CONSTANTS } from '@/constants/coinPlans';
 
 export class MockMatchingService {
   // 学生がマッチング申請を送信
@@ -24,10 +24,10 @@ export class MockMatchingService {
 
       // 学生の残高チェック
       const student = mockDb.students.find((s) => s.id === studentId);
-      if (!student || student.coins < MATCHING_COST) {
+      if (!student || student.coins < COIN_CONSTANTS.MATCHING_COST) {
         return {
           success: false,
-          error: `コインが不足しています。必要コイン：${MATCHING_COST}コイン`,
+          error: `コインが不足しています。必要コイン：${COIN_CONSTANTS.MATCHING_COST}コイン`,
           data: {} as MatchRequest,
         };
       }
@@ -66,20 +66,20 @@ export class MockMatchingService {
         tutor_id: tutorId,
         message: message.trim(),
         status: 'pending',
-        coin_cost: MATCHING_COST,
+        coin_cost: COIN_CONSTANTS.MATCHING_COST,
         created_at: now,
         updated_at: now,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7日後に期限切れ
       };
 
       // 学生のコイン残高から差し引き（仮押さえ）
-      student.coins -= MATCHING_COST;
+      student.coins -= COIN_CONSTANTS.MATCHING_COST;
 
       // コイン取引記録を追加
       const transaction: CoinTransaction = {
         id: String(uuid.v4()),
         user_id: studentId,
-        amount: -MATCHING_COST,
+        amount: -COIN_CONSTANTS.MATCHING_COST,
         type: 'matching',
         description: `${tutor.name}さんへのマッチング申請`,
         related_id: matchId,
