@@ -307,3 +307,6 @@ declare module './data' {
     notifications?: Notification[];
   }
 }
+
+// シングルトンインスタンスをエクスポート
+export const mockNotificationService = new MockNotificationService();

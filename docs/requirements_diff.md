@@ -152,6 +152,39 @@
 
 ---
 
+### 2025-09-13（モックMVP整備：台帳・申請フロー・通知/Realtime・チャット一本化・TutorService・APIモード統一）
+
+- コイン台帳の一元化
+  - CoinService は mockDb.coinTransactions を唯一の台帳として参照/更新（matching/lessonの取引と整合）
+- 授業申請フローの整合（仮押さえ→承認→完了）
+  - StudentService.bookLesson: status=pending, escrow_status=reserved, 残高差引＋pending取引追加
+  - EscrowService.approveLesson: pending取引をcompletedへ（重複計上防止）
+  - cancel/reject: 返金時に pending を cancelled へ
+- 通知配線の実装
+  - マッチ申請受信/承認、授業承認/完了、メッセージ受信で通知を作成
+  - NotificationScreen に未読数バッジ・一括既読を結線
+- Realtime（擬似）
+  - mockRealtimeService を追加（通知/授業更新のポーリング購読）
+  - NotificationScreen/LessonScreen に購読を配線
+- チャットの一本化
+  - ChatService を MockChatRepository へ委譲するアダプタに変更
+  - status 上書きの簡易実装を追加
+- TutorService のモック実装
+  - プロファイル更新（最低料金バリデーション）、申請承認/拒否、レッスン一覧/更新、空き時間更新
+- APIモード切替の統一
+  - EXPO_PUBLIC_API_MODE=mock|supabase を最優先、未設定時のみ EXPO_PUBLIC_USE_MOCK にフォールバック
+- 返金トランザクションの文言統一
+  - lesson_refund: "返金: 授業 <subject>"
+  - matching refund: type=refund, description="返金: マッチング申請"
+
+影響ファイル（主な）
+
+- src/services/api/mock/{coinService.ts, studentService.ts, escrowService.ts, matchingService.ts, notificationService.ts, realtimeService.ts, chatService.ts, tutorService.ts, index.ts}
+- src/screens/{NotificationScreen.tsx, LessonScreen.tsx}
+- docs/README.md（APIモードの説明を更新）
+
+---
+
 ## 変更履歴
 
 ### 2025-01-06（お気に入り機能）
@@ -715,5 +748,96 @@
 - UI一貫性: ✅ 3画面完全統一
 - 視覚的改善: ✅ コンパクトレイアウト達成
 - モーダル品質: ✅ 背景表示不具合完全解決
+
+---
+
+### 2025-09-13（Expo SDK 54 アップグレード完了）
+
+#### 背景・目的
+
+- **問題**: Expo Go SDK 54がインストールされているデバイスでテスト不可
+- **原因**: プロジェクトがSDK 53のまま、デバイスはSDK 54
+- **解決**: プロジェクトを完全にSDK 54に移行
+
+#### 実行した変更
+
+##### 1. 依存関係更新
+
+- `package.json`:
+  - `expo`: "~53.0.22" → "~54.0.0"
+  - `@types/react`: "~19.0.10" → "~19.1.10"
+  - `typescript`: "~5.8.3" → "~5.9.2"
+- 新規依存関係追加:
+  - `react-native-worklets`: Reanimated v4の新要件として追加
+
+##### 2. 設定ファイル更新
+
+- `babel.config.js`:
+  - `'react-native-reanimated/plugin'` → `'react-native-worklets/plugin'`
+- `app.json`:
+  - Root-level expo objectの警告解決（sdkVersionの明示的設定削除）
+
+##### 3. 構文エラー修正
+
+- `src/services/api/mock/escrowService.ts`:
+  - 166行目の余分な閉じ括弧 `}` を削除
+
+#### アップグレード手順
+
+1. **依存関係競合の解決**:
+
+   ```
+   npx expo install --fix  # 最初は競合エラー
+   npm install --legacy-peer-deps  # 競合回避
+   ```
+
+2. **追加依存関係のインストール**:
+
+   ```
+   npm install react-native-worklets --legacy-peer-deps
+   npm install @types/react@~19.1.10 typescript@~5.9.2 --legacy-peer-deps
+   ```
+
+3. **バンドルテスト**:
+   ```
+   npx expo start --clear  # 正常バンドル確認
+   ```
+
+#### 結果・品質保証
+
+- ✅ **Expo SDK 54への完全移行完了**
+- ✅ **全依存関係の互換性確保**
+- ✅ **アプリの正常バンドル**: 2816 modules成功
+- ✅ **Expo Go SDK 54でのテスト準備完了**
+- ✅ **構文エラー・警告の完全解消**
+- ✅ **Expo Doctor診断**: 17/17 checks passed
+
+#### テクニカルポイント
+
+- **React Native Reanimated v4対応**: worklets pluginへの移行が必要
+- **依存関係競合**: `--legacy-peer-deps`フラグで解決
+- **型システム**: React 19.1対応のTypeScript型定義に更新
+
+#### 次のアクション推奨
+
+- Expo Go 54でのモバイルデバイステスト実施
+- 主要機能の動作確認（認証、マッチング、チャット、通知）
+- 必要に応じて追加の互換性調整
+
+#### 影響ファイル
+
+**修正:**
+
+- package.json（SDK及び型定義更新）
+- babel.config.js（Reanimatedプラグイン更新）
+- app.json（設定警告解決）
+- src/services/api/mock/escrowService.ts（構文修正）
+
+**技術環境:**
+
+- Expo SDK: 53.0.22 → 54.0.6
+- React: 19.0.0 → 19.1.0
+- TypeScript: 5.8.3 → 5.9.2
+- React Native Reanimated: 3.17.4 → 4.1.0
 
 ---

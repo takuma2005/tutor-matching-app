@@ -2,6 +2,7 @@ import uuid from 'react-native-uuid';
 
 import type { ApiResponse, MatchRequest, MatchStatus, CoinTransaction } from '../types';
 import { mockDb } from './data';
+import { mockNotificationService } from './notificationService';
 
 import { COIN_CONSTANTS } from '@/constants/coinPlans';
 
@@ -93,6 +94,14 @@ export class MockMatchingService {
       mockDb.matchRequests.push(matchRequest);
       mockDb.coinTransactions.push(transaction);
 
+      // 通知: 先輩に申請受信を通知
+      await mockNotificationService.createMatchRequestNotification(
+        tutor.id,
+        student.id,
+        student.name,
+        matchId,
+      );
+
       return {
         success: true,
         data: matchRequest,
@@ -113,6 +122,15 @@ export class MockMatchingService {
   ): Promise<ApiResponse<MatchRequest[]>> {
     try {
       let requests = mockDb.matchRequests.filter((req) => req.student_id === studentId);
+
+      // 期限切れを自動遷移（副作用はモック限定）
+      const now = Date.now();
+      for (const r of requests) {
+        if (r.status === 'pending' && r.expires_at && new Date(r.expires_at).getTime() < now) {
+          r.status = 'expired';
+          r.updated_at = new Date().toISOString();
+        }
+      }
 
       if (status) {
         requests = requests.filter((req) => req.status === status);
@@ -141,6 +159,15 @@ export class MockMatchingService {
   ): Promise<ApiResponse<MatchRequest[]>> {
     try {
       let requests = mockDb.matchRequests.filter((req) => req.tutor_id === tutorId);
+
+      // 期限切れを自動遷移（副作用はモック限定）
+      const now = Date.now();
+      for (const r of requests) {
+        if (r.status === 'pending' && r.expires_at && new Date(r.expires_at).getTime() < now) {
+          r.status = 'expired';
+          r.updated_at = new Date().toISOString();
+        }
+      }
 
       if (status) {
         requests = requests.filter((req) => req.status === status);
@@ -198,6 +225,17 @@ export class MockMatchingService {
       };
       mockDb.chatRooms.push(chatRoom);
 
+      // 通知: 後輩に承認通知
+      const tutor = mockDb.tutors.find((t) => t.id === matchRequest.tutor_id);
+      if (tutor) {
+        await mockNotificationService.createMatchApprovalNotification(
+          matchRequest.student_id,
+          matchRequest.tutor_id,
+          tutor.name,
+          matchId,
+        );
+      }
+
       return {
         success: true,
         data: matchRequest,
@@ -247,7 +285,7 @@ export class MockMatchingService {
           user_id: student.id,
           amount: matchRequest.coin_cost,
           type: 'refund',
-          description: `マッチング申請拒否による返金`,
+          description: `返金: マッチング申請`,
           related_id: matchId,
           status: 'completed',
           created_at: new Date().toISOString(),
@@ -304,7 +342,7 @@ export class MockMatchingService {
           user_id: student.id,
           amount: matchRequest.coin_cost,
           type: 'refund',
-          description: `マッチング申請キャンセルによる返金`,
+          description: `返金: マッチング申請`,
           related_id: matchId,
           status: 'completed',
           created_at: new Date().toISOString(),

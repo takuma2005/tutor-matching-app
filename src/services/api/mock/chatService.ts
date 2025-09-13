@@ -1,90 +1,38 @@
+import { mockDb } from './data';
+import { mockNotificationService } from './notificationService';
+
 import type { ChatService, ChatRoom, Message, MessageStatus } from '@/services/api/types';
+import { MockChatRepository } from '@/services/mock/MockChatRepository';
 
-const MOCK_DELAY = { SHORT: 200, MEDIUM: 500, LONG: 1000 } as const;
-
-// メモリ内データストア（開発用）
-const chatRooms: ChatRoom[] = [
-  {
-    id: 'room_1',
-    tutorId: '1', // 既存mockTutorに合わせる
-    studentId: 'student-1',
-    createdAt: new Date('2024-01-15T09:00:00'),
-    updatedAt: new Date('2024-01-15T10:30:00'),
-  },
-  {
-    id: 'room_2',
-    tutorId: '2',
-    studentId: 'student-1',
-    createdAt: new Date('2024-01-14T14:00:00'),
-    updatedAt: new Date('2024-01-14T15:45:00'),
-  },
-  {
-    id: 'room_3',
-    tutorId: '3',
-    studentId: 'student-1',
-    createdAt: new Date('2024-01-13T16:00:00'),
-    updatedAt: new Date('2024-01-13T18:20:00'),
-  },
-];
-
-const messages: Message[] = [
-  {
-    id: 'msg_1',
-    chatRoomId: 'room_1',
-    senderId: '1',
-    text: 'こんにちは！数学の授業、明日の3時からでいかがでしょうか？課題も用意してお待ちしています。',
-    timestamp: new Date('2024-01-15T10:30:00'),
-    status: 'delivered',
-  },
-  {
-    id: 'msg_2',
-    chatRoomId: 'room_2',
-    senderId: 'student-1',
-    text: '英語の文法でわからないところがあります。教えていただけますか？特に関係代名詞の使い方が...',
-    timestamp: new Date('2024-01-14T15:45:00'),
-    status: 'read',
-  },
-  {
-    id: 'msg_3',
-    chatRoomId: 'room_3',
-    senderId: '3',
-    text: 'お疲れさまでした！今日の授業、いかがでしたか？復習問題も送っておきますね。',
-    timestamp: new Date('2024-01-13T18:20:00'),
-    status: 'read',
-  },
-];
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const repo = new MockChatRepository();
+const overlayStatus = new Map<string, MessageStatus>(); // ChatService独自のstatus上書き
 
 export const mockChatService: ChatService = {
   async getChatRooms(studentId: string) {
-    await delay(MOCK_DELAY.SHORT);
-    const studentRooms = chatRooms.filter((r) => r.studentId === studentId);
-
-    const roomsWithLast = studentRooms.map((room) => {
-      const roomMessages = messages
-        .filter((m) => m.chatRoomId === room.id)
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-      const last = roomMessages[0];
-      return {
-        ...room,
-        lastMessage: last,
-        messageCount: roomMessages.length,
-      };
-    });
-
-    return { success: true, data: roomsWithLast } as const;
+    const rooms = await repo.getChatRooms(studentId);
+    // lastMessage と件数は簡易に取得（モックのため効率より簡便性優先）
+    const withMeta = await Promise.all(
+      rooms.map(async (room) => {
+        const msgs = await repo.listMessages(room.id, { limit: 50 });
+        const last = msgs[msgs.length - 1];
+        return { ...room, lastMessage: last, messageCount: msgs.length } as ChatRoom & {
+          lastMessage?: Message;
+          messageCount?: number;
+        };
+      }),
+    );
+    return { success: true, data: withMeta } as const;
   },
 
   async getMessages(chatRoomId: string, page = 1, limit = 100) {
-    await delay(MOCK_DELAY.SHORT);
-    const all = messages
-      .filter((m) => m.chatRoomId === chatRoomId)
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const slice = all.slice(start, end);
+    const upto = page * limit;
+    const fetched = await repo.listMessages(chatRoomId, { limit: upto });
+    // repo は古い順で返すため、末尾が新しい
+    const total = fetched.length; // 簡易: 取得範囲内での件数
+    const start = Math.max(0, total - limit);
+    const slice = fetched
+      .slice(start)
+      .map((m) => ({ ...m, status: overlayStatus.get(m.id) || m.status }));
 
     return {
       success: true,
@@ -92,43 +40,52 @@ export const mockChatService: ChatService = {
       pagination: {
         page,
         limit,
-        total: all.length,
-        has_more: end < all.length,
+        total,
+        has_more: total > limit * page,
       },
     } as const;
   },
 
   async sendMessage(chatRoomId: string, senderId: string, text: string) {
-    await delay(MOCK_DELAY.MEDIUM);
-    const newMsg: Message = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      chatRoomId,
-      senderId,
-      text: text.trim(),
-      timestamp: new Date(),
-      status: 'sent',
-    };
-    messages.push(newMsg);
+    const newMsg = await repo.sendMessage(chatRoomId, senderId, text.trim());
 
-    const roomIdx = chatRooms.findIndex((r) => r.id === chatRoomId);
-    if (roomIdx !== -1) {
-      chatRooms[roomIdx] = { ...chatRooms[roomIdx], updatedAt: new Date() };
+    // 通知: 受信者に新着メッセージを通知
+    const rooms = await repo.getChatRooms(senderId); // 簡易: 相手ID判定のためのフォールバック
+    const room = rooms.find((r) => r.id === chatRoomId) as ChatRoom | undefined;
+    if (room) {
+      const receiverId = senderId === room.studentId ? room.tutorId : room.studentId;
+      const senderName =
+        mockDb.students.find((s) => s.id === senderId)?.name ||
+        mockDb.tutors.find((t) => t.id === senderId)?.name ||
+        'ユーザー';
+      await mockNotificationService.createMessageNotification(
+        receiverId,
+        senderId,
+        senderName,
+        newMsg.id,
+      );
     }
 
     return { success: true, data: newMsg } as const;
   },
 
   async updateMessageStatus(messageId: string, status: MessageStatus) {
-    await delay(MOCK_DELAY.SHORT);
-    const idx = messages.findIndex((m) => m.id === messageId);
-    if (idx === -1)
-      return {
-        success: false,
-        error: 'MessageNotFound',
-        data: undefined as unknown as Message,
-      } as const;
-    messages[idx] = { ...messages[idx], status };
-    return { success: true, data: messages[idx] } as const;
+    // Repository は status 更新APIを持たないため、Service 層で上書き管理
+    overlayStatus.set(messageId, status);
+    // 直近のメッセージ実体を取得して返す（簡易）
+    const rooms = await repo.getChatRooms('student-1'); // 簡易: 実際には現在ユーザーIDが必要
+    for (const room of rooms) {
+      const msgs = await repo.listMessages(room.id, { limit: 50 });
+      const found = msgs.find((m) => m.id === messageId);
+      if (found) {
+        return { success: true, data: { ...found, status } } as const;
+      }
+    }
+    return {
+      success: false,
+      error: 'MessageNotFound',
+      data: undefined as unknown as Message,
+    } as const;
   },
 
   async createChatRoom(tutorId: string, studentId: string) {

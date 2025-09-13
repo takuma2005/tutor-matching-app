@@ -5,6 +5,7 @@ import {
   Student,
   Tutor,
   Lesson,
+  CoinTransaction,
   ApiResponse,
   PaginatedResponse,
   TutorSearchFilters,
@@ -161,20 +162,34 @@ class MockStudentService implements StudentService {
       };
     }
 
-    // レッスンを作成
+    // レッスンを作成（申請: pending、仮押さえ: reserved）
     const newLesson: Lesson = {
       ...lessonData,
       id: `lesson-${generateId()}`,
-      status: 'scheduled',
+      status: 'pending',
+      escrow_status: 'reserved',
       created_at: getCurrentTimestamp(),
       updated_at: getCurrentTimestamp(),
     };
 
     this.lessons.push(newLesson);
 
-    // 生徒のコインを減らす
+    // 生徒のコインを仮押さえ（残高から差し引き）
     const studentIndex = this.students.findIndex((s) => s.id === lessonData.student_id);
     this.students[studentIndex].coins -= lessonData.coin_cost;
+
+    // 取引台帳に pending を記録（related_id=lessonId）
+    const reserveTx: CoinTransaction = {
+      id: `tx-${generateId()}`,
+      user_id: student.id,
+      amount: -lessonData.coin_cost,
+      type: 'lesson_payment',
+      description: `授業仮押さえ: ${lessonData.subject}`,
+      related_id: newLesson.id,
+      status: 'pending',
+      created_at: getCurrentTimestamp(),
+    };
+    mockDb.coinTransactions.push(reserveTx);
 
     return {
       data: newLesson,

@@ -16,8 +16,10 @@ import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 import Card from '@/components/common/Card';
 import ScreenContainer from '@/components/common/ScreenContainer';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Notification, NotificationType } from '@/services/api/mock/notificationService';
 import { MockNotificationService } from '@/services/api/mock/notificationService';
+import { mockRealtimeService } from '@/services/api/mock/realtimeService';
 
 type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
 
@@ -30,33 +32,50 @@ type LocalNotification = Notification & {
 export default function NotificationScreen() {
   const [notifications, setNotifications] = useState<LocalNotification[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const notificationService = useMemo(() => new MockNotificationService(), []);
+  const { user: authUser } = useAuth();
+  const userId = authUser?.id;
 
   const loadNotifications = useCallback(async () => {
     try {
-      // 現在は学生 ID をハードコード
-      const response = await notificationService.getUserNotifications('student-1');
+      if (!userId) return;
+      const [listRes, unreadRes] = await Promise.all([
+        notificationService.getUserNotifications(userId),
+        notificationService.getUnreadCount(userId),
+      ]);
 
-      if (response.success) {
-        const transformedNotifications: LocalNotification[] = response.data.map((n) => ({
+      if (listRes.success) {
+        const transformedNotifications: LocalNotification[] = listRes.data.map((n) => ({
           ...n,
           timestamp: new Date(n.created_at),
           actionRequired: ['match_request_received', 'lesson_request_received'].includes(n.type),
         }));
-
         setNotifications(transformedNotifications);
+      }
+
+      if (unreadRes.success) {
+        setUnreadCount(unreadRes.data);
       }
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {
       setIsRefreshing(false);
     }
-  }, [notificationService]);
+  }, [notificationService, userId]);
 
   useFocusEffect(
     useCallback(() => {
       loadNotifications();
-    }, [loadNotifications]),
+      // Realtime 購読（新着通知）
+      const unsubscribe = userId
+        ? mockRealtimeService.subscribeToUserNotifications(userId, () => {
+            // 新規通知が来たらリストと未読数を更新
+            loadNotifications();
+          })
+        : () => {};
+      return () => unsubscribe();
+    }, [loadNotifications, userId]),
   );
 
   const handleRefresh = () => {
@@ -143,6 +162,7 @@ export default function NotificationScreen() {
         setNotifications((prev) =>
           prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n)),
         );
+        setUnreadCount((c) => Math.max(0, c - 1));
       } catch (error) {
         console.error('Failed to mark notification as read:', error);
       }
@@ -169,8 +189,10 @@ export default function NotificationScreen() {
 
   const markAllAsRead = async () => {
     try {
-      await notificationService.markAllAsRead('student-1');
+      if (!userId) return;
+      await notificationService.markAllAsRead(userId);
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
     }
@@ -270,11 +292,6 @@ export default function NotificationScreen() {
     [notifications],
   );
 
-  const unreadCount = useMemo(
-    () => notifications.filter((n) => !n.is_read).length,
-    [notifications],
-  );
-
   return (
     <ScreenContainer
       withScroll={false}
@@ -296,7 +313,7 @@ export default function NotificationScreen() {
               <Text style={styles.demoText}>デモ追加</Text>
             </TouchableOpacity>
           )}
-          {unreadCount > 0 && (
+          {userId && unreadCount > 0 && (
             <TouchableOpacity style={styles.markAllButton} onPress={markAllAsRead}>
               <Text style={styles.markAllText}>すべて既読</Text>
             </TouchableOpacity>

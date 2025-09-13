@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Image } from 'react-native';
 
 import Card from '@/components/common/Card';
@@ -8,7 +8,8 @@ import { useUser } from '@/contexts/UserContext';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import { MockEscrowService } from '@/services/api/mock/escrowService';
-import type { Tutor } from '@/services/api/types';
+import { mockRealtimeService } from '@/services/api/mock/realtimeService';
+import type { Lesson as ApiLesson, Tutor } from '@/services/api/types';
 import { colors, spacing, typography, borderRadius } from '@/styles/theme';
 
 type LessonStatus =
@@ -43,6 +44,23 @@ export default function LessonScreen() {
   const { user } = useUser();
   const escrowService = new MockEscrowService();
 
+  // API Lesson -> 画面表示用 Lesson への変換
+  const mapApiLessonToLocal = useCallback(
+    (l: ApiLesson): Lesson => ({
+      id: l.id,
+      tutorId: l.tutor_id,
+      studentId: l.student_id,
+      subject: l.subject,
+      scheduledAt: new Date(l.scheduled_at),
+      duration: l.duration_minutes,
+      status: l.status,
+      escrow_status: l.escrow_status,
+      price: l.coin_cost,
+      notes: l.lesson_notes,
+    }),
+    [],
+  );
+
   React.useEffect(() => {
     const api = getApiClient();
     let mounted = true;
@@ -52,27 +70,43 @@ export default function LessonScreen() {
     ]).then(([lessonsResp, tutorsResp]) => {
       if (!mounted) return;
       const srvLessons = lessonsResp?.success ? lessonsResp.data : [];
-      const mapped: Lesson[] = srvLessons.map((l) => ({
-        id: l.id,
-        tutorId: l.tutor_id,
-        studentId: l.student_id,
-        subject: l.subject,
-        scheduledAt: new Date(l.scheduled_at),
-        duration: l.duration_minutes,
-        status: l.status,
-        escrow_status: l.escrow_status,
-        price: l.coin_cost,
-        notes: l.lesson_notes,
-      }));
+      const mapped: Lesson[] = srvLessons.map((l) => mapApiLessonToLocal(l));
       setLessons(mapped);
       if (tutorsResp?.success) setTutors(tutorsResp.data);
     });
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [mapApiLessonToLocal]);
 
   const now = Date.now();
+
+  // レッスンID集合が変わったときだけ購読を貼り替える
+  const lessonIdsKey = useMemo(
+    () =>
+      lessons
+        .map((l) => l.id)
+        .sort()
+        .join(','),
+    [lessons],
+  );
+
+  React.useEffect(() => {
+    if (lessons.length === 0) return;
+    const unsubs = lessons.map((l) =>
+      mockRealtimeService.subscribeLessonUpdates(l.id, (srv) => {
+        // srv は API 型。ローカル表示用にマップして差し替え
+        setLessons((prev) =>
+          prev.map((it) =>
+            it.id === srv.id ? mapApiLessonToLocal(srv as unknown as ApiLesson) : it,
+          ),
+        );
+      }),
+    );
+    return () => {
+      unsubs.forEach((u) => u());
+    };
+  }, [lessonIdsKey, mapApiLessonToLocal]);
   const upcomingLessons = useMemo(() => {
     return lessons.filter((lesson) => {
       const t = lesson.scheduledAt.getTime();

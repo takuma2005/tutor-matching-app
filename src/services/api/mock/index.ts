@@ -3,7 +3,10 @@
 import { mockAuthService } from './authService';
 import { mockChatService } from './chatService';
 import { mockCoinService } from './coinService';
+import { mockNotificationService } from './notificationService';
+import { mockRealtimeService } from './realtimeService';
 import { mockStudentService } from './studentService';
+import { mockTutorService } from './tutorService';
 
 // すべてのモックサービスを統合したAPIクライアント
 export const mockApiClient = {
@@ -11,18 +14,29 @@ export const mockApiClient = {
   student: mockStudentService,
   coin: mockCoinService,
   chat: mockChatService,
+  tutor: mockTutorService,
+  notification: mockNotificationService,
+  realtime: mockRealtimeService,
 };
 
 // 個別エクスポート
 export { mockAuthService } from './authService';
 export { mockStudentService } from './studentService';
+export { mockTutorService } from './tutorService';
 export { mockCoinService } from './coinService';
+export { mockNotificationService } from './notificationService';
+export { mockRealtimeService } from './realtimeService';
 
 // テストデータもエクスポート
 export * from './data';
 
 // API フラグを使った切り替え用の設定
 export const API_CONFIG = {
+  // 新: 明示的なAPIモード（mock | supabase）。未設定時は下記USE_MOCKにフォールバック
+  API_MODE:
+    (typeof process !== 'undefined' && (process.env?.EXPO_PUBLIC_API_MODE as string | undefined)) ||
+    undefined,
+  // 旧: 後方互換のため維持
   USE_MOCK:
     (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_USE_MOCK === 'true') ||
     (typeof __DEV__ !== 'undefined' && __DEV__ === true),
@@ -100,6 +114,17 @@ const prodApiClient = {
 };
 
 export const getApiClient = () => {
+  // 明示的なAPIモードがあれば最優先
+  const mode = ((): string => {
+    if (typeof process === 'undefined') return '';
+    const v = process.env?.EXPO_PUBLIC_API_MODE;
+    return typeof v === 'string' ? v.toLowerCase().trim() : '';
+  })();
+
+  if (mode === 'mock') return mockApiClient;
+  if (mode === 'supabase') return prodApiClient;
+
+  // フォールバック（後方互換）
   return API_CONFIG.USE_MOCK ? mockApiClient : prodApiClient;
 };
 

@@ -2,6 +2,7 @@ import uuid from 'react-native-uuid';
 
 import type { ApiResponse, Lesson, CoinTransaction } from '../types';
 import { mockDb } from './data';
+import { mockNotificationService } from './notificationService';
 
 import { COIN_CONSTANTS } from '@/constants/coinPlans';
 
@@ -27,7 +28,7 @@ export class MockEscrowService {
         };
       }
 
-      // 学生のコインを仮押さえからエスクローに移行
+      // 学生の存在確認
       const student = mockDb.students.find((s) => s.id === lesson.student_id);
       if (!student) {
         return {
@@ -37,25 +38,50 @@ export class MockEscrowService {
         };
       }
 
-      // 授業を承認状態に更新
+      // 授業を承認状態に更新（仮押さえ → エスクロー）
       lesson.status = 'approved';
       lesson.escrow_status = 'escrowed';
       lesson.approved_at = new Date().toISOString();
       lesson.updated_at = new Date().toISOString();
 
-      // エスクロー取引記録を追加
-      const escrowTransaction: CoinTransaction = {
-        id: String(uuid.v4()),
-        user_id: student.id,
-        amount: -lesson.coin_cost,
-        type: 'lesson_payment',
-        description: `授業料エスクロー: ${lesson.subject}`,
-        related_id: lessonId,
-        status: 'completed',
-        created_at: new Date().toISOString(),
-      };
+      // 既存の pending 取引（lesson_payment）を completed に更新
+      const pendingTx = mockDb.coinTransactions.find(
+        (t) =>
+          t.user_id === student.id &&
+          t.related_id === lessonId &&
+          t.type === 'lesson_payment' &&
+          t.status === 'pending',
+      );
 
-      mockDb.coinTransactions.push(escrowTransaction);
+      if (pendingTx) {
+        pendingTx.status = 'completed';
+        pendingTx.description = `授業料エスクロー: ${lesson.subject}`;
+      } else {
+        // フォールバック: 取引が見つからない場合は completed を新規作成
+        const escrowTransaction: CoinTransaction = {
+          id: String(uuid.v4()),
+          user_id: student.id,
+          amount: -lesson.coin_cost,
+          type: 'lesson_payment',
+          description: `授業料エスクロー: ${lesson.subject}`,
+          related_id: lessonId,
+          status: 'completed',
+          created_at: new Date().toISOString(),
+        };
+        mockDb.coinTransactions.push(escrowTransaction);
+      }
+
+      // 通知: 学生へ授業承認の通知
+      const tutor = mockDb.tutors.find((t) => t.id === lesson.tutor_id);
+      if (tutor) {
+        await mockNotificationService.createLessonApprovalNotification(
+          lesson.student_id,
+          lesson.tutor_id,
+          tutor.name,
+          lesson.subject,
+          lessonId,
+        );
+      }
 
       return {
         success: true,
@@ -102,13 +128,22 @@ export class MockEscrowService {
           user_id: student.id,
           amount: lesson.coin_cost,
           type: 'lesson_refund',
-          description: `授業拒否による返金: ${lesson.subject}`,
+          description: `返金: 授業 ${lesson.subject}`,
           related_id: lessonId,
           status: 'completed',
           created_at: new Date().toISOString(),
         };
-
         mockDb.coinTransactions.push(refundTransaction);
+
+        // 既存の pending 取引をキャンセルへ更新
+        const pendingTx = mockDb.coinTransactions.find(
+          (t) =>
+            t.user_id === student.id &&
+            t.related_id === lessonId &&
+            t.type === 'lesson_payment' &&
+            t.status === 'pending',
+        );
+        if (pendingTx) pendingTx.status = 'cancelled';
       }
 
       // 授業を拒否状態に更新
@@ -235,6 +270,17 @@ export class MockEscrowService {
 
       mockDb.coinTransactions.push(feeTransaction);
 
+      // 通知: 講師へ授業完了と受取通知
+      const student = mockDb.students.find((s) => s.id === lesson.student_id);
+      await mockNotificationService.createLessonCompletedNotification(
+        lesson.tutor_id,
+        lesson.student_id,
+        student?.name || '生徒',
+        lesson.subject,
+        tutorAmount,
+        lessonId,
+      );
+
       // 授業を完了状態に更新
       lesson.status = 'completed';
       lesson.escrow_status = 'released';
@@ -294,13 +340,23 @@ export class MockEscrowService {
           user_id: student.id,
           amount: lesson.coin_cost,
           type: 'lesson_refund',
-          description: `授業キャンセルによる返金: ${lesson.subject}`,
+          description: `返金: 授業 ${lesson.subject}`,
           related_id: lessonId,
           status: 'completed',
           created_at: new Date().toISOString(),
         };
 
         mockDb.coinTransactions.push(refundTransaction);
+
+        // 既存の pending 取引をキャンセルへ更新
+        const pendingTx = mockDb.coinTransactions.find(
+          (t) =>
+            t.user_id === student.id &&
+            t.related_id === lessonId &&
+            t.type === 'lesson_payment' &&
+            t.status === 'pending',
+        );
+        if (pendingTx) pendingTx.status = 'cancelled';
       }
 
       // 授業をキャンセル状態に更新

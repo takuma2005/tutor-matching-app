@@ -92,10 +92,11 @@ EXPO_PUBLIC_API_URL=your_api_url
 EXPO_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
 EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_key
 
-# Toggle mock vs production API client
-# true: use in-memory/mock API (default during development)
-# false: use production stubs (until real backend is integrated)
-EXPO_PUBLIC_USE_MOCK=true
+# API mode (mock | supabase)
+# mock: use in-memory/mock API (default during development)
+# supabase: use production stubs / real backend when integrated
+EXPO_PUBLIC_API_MODE=mock
+# Legacy (fallback only): EXPO_PUBLIC_USE_MOCK=true
 
 # Development convenience: skip auth gate in development flows
 EXPO_PUBLIC_SKIP_AUTH=true
@@ -116,14 +117,14 @@ EXPO_PUBLIC_SKIP_AUTH=true
 ### ステージ構成（推奨）
 
 - Dev（ローカル/テスト端末）
-  - EXPO_PUBLIC_USE_MOCK=true でモックAPIを使用
+  - EXPO_PUBLIC_API_MODE=mock でモックAPIを使用
   - Supabase: テスト用プロジェクト、Anon keyのみ（Service Roleはクライアントに埋め込まない）
   - Stripe: テストモードのみ
 - Staging/QA（実機検証）
   - 実際の Supabase + Stripe（テストモード）でエンドツーエンド検証
   - 本番と同じRLS/ポリシー/ウェブフックで動作確認
 - Production（本番）
-  - EXPO_PUBLIC_USE_MOCK=false（本番APIに切替）
+  - EXPO_PUBLIC_API_MODE=supabase（本番APIに切替）
   - ドメイン/ディープリンク設定、ストア配布設定、シークレットはEAS/サーバーのみに保管
 
 ---
@@ -253,7 +254,7 @@ EXPO_PUBLIC_API_URL=...
 EXPO_PUBLIC_SUPABASE_URL=...
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=...
-EXPO_PUBLIC_USE_MOCK=false  # 本番では false
+EXPO_PUBLIC_API_MODE=supabase  # 本番では supabase
 EXPO_PUBLIC_SKIP_AUTH=false # 本番では false
 ```
 
@@ -274,7 +275,7 @@ STRIPE_WEBHOOK_SECRET=...
 - RLS: 別ユーザー間でデータが見えないこと（想定した行だけ見える）
 - 決済テスト: テストカード（3DS含む）で申請→確保→完了→分配→返金が一連で通る
 - Webhook: 署名検証OK、イベントに応じてDBが正しく更新される
-- フラグ: 本番で EXPO_PUBLIC_USE_MOCK=false、SKIP_AUTH=false である
+- フラグ: 本番で EXPO_PUBLIC_API_MODE=supabase、SKIP_AUTH=false である
 
 ---
 

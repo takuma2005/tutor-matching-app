@@ -1,16 +1,13 @@
-// コインサービスのモック実装
+// コインサービスのモック実装（台帳を mockDb に一元化）
 
 import { CoinService, CoinTransaction, ApiResponse, PaginatedResponse } from '../types';
-import { mockStudents, mockCoinTransactions, delay, generateId, getCurrentTimestamp } from './data';
+import { mockDb, delay, generateId, getCurrentTimestamp } from './data';
 
 class MockCoinService implements CoinService {
-  private transactions: CoinTransaction[] = [...mockCoinTransactions];
-  private students = mockStudents; // 参照で共有
-
   async getBalance(userId: string): Promise<ApiResponse<{ balance: number }>> {
     await delay(200);
 
-    const student = this.students.find((s) => s.id === userId);
+    const student = mockDb.students.find((s) => s.id === userId);
 
     if (!student) {
       return {
@@ -41,7 +38,7 @@ class MockCoinService implements CoinService {
       };
     }
 
-    const student = this.students.find((s) => s.id === userId);
+    const student = mockDb.students.find((s) => s.id === userId);
     if (!student) {
       return {
         data: null as unknown as CoinTransaction,
@@ -73,11 +70,12 @@ class MockCoinService implements CoinService {
       created_at: getCurrentTimestamp(),
     };
 
-    this.transactions.push(transaction);
+    // 台帳へ記録（mockDb に一元化）
+    mockDb.coinTransactions.push(transaction);
 
     // ユーザーのコインを更新
-    const studentIndex = this.students.findIndex((s) => s.id === userId);
-    this.students[studentIndex].coins += amount;
+    const studentIndex = mockDb.students.findIndex((s) => s.id === userId);
+    mockDb.students[studentIndex].coins += amount;
 
     return {
       data: transaction,
@@ -92,8 +90,8 @@ class MockCoinService implements CoinService {
   ): Promise<PaginatedResponse<CoinTransaction>> {
     await delay(300);
 
-    // ユーザーの取引のみフィルタリング
-    const userTransactions = this.transactions.filter((tx) => tx.user_id === userId);
+    // ユーザーの取引のみフィルタリング（mockDb を参照）
+    const userTransactions = mockDb.coinTransactions.filter((tx) => tx.user_id === userId);
 
     // 日付順でソート（新しい順）
     userTransactions.sort(
@@ -126,17 +124,18 @@ class MockCoinService implements CoinService {
       created_at: getCurrentTimestamp(),
     };
 
-    this.transactions.push(fullTransaction);
+    // 台帳へ追加
+    mockDb.coinTransactions.push(fullTransaction);
 
     // ユーザーのコイン残高を更新
-    const studentIndex = this.students.findIndex((s) => s.id === transaction.user_id);
+    const studentIndex = mockDb.students.findIndex((s) => s.id === transaction.user_id);
     if (studentIndex !== -1) {
-      this.students[studentIndex].coins += transaction.amount;
+      mockDb.students[studentIndex].coins += transaction.amount;
     }
   }
 
   getMockTransactions(): CoinTransaction[] {
-    return [...this.transactions];
+    return [...mockDb.coinTransactions];
   }
 
   // コイン購入パッケージの定義（constants/coinPlans.ts から取得）
