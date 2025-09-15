@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
-import TabNavigator from '@/navigation/TabNavigator';
 import PhoneVerificationScreen from '@/screens/auth/PhoneVerificationScreen';
 import ProfileSetupScreen, { ProfileData } from '@/screens/auth/ProfileSetupScreen';
 import RoleSelectionScreen from '@/screens/auth/RoleSelectionScreen';
@@ -56,7 +55,9 @@ export default function AuthFlow() {
           onProfileComplete={handleProfileComplete}
         />
       );
+    case 'completed':
     default:
-      return <TabNavigator />;
+      // completed状態になったらRoleBasedNavigatorが適切なナビゲーションを表示する
+      return null;
   }
 }

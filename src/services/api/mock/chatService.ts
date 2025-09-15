@@ -1,4 +1,4 @@
-import { mockDb } from './data';
+import { mockDb, delay } from './data';
 import { mockNotificationService } from './notificationService';
 
 import type { ChatService, ChatRoom, Message, MessageStatus } from '@/services/api/types';
@@ -89,8 +89,10 @@ export const mockChatService: ChatService = {
   },
 
   async createChatRoom(tutorId: string, studentId: string) {
-    await delay(MOCK_DELAY.SHORT);
-    const existing = chatRooms.find((r) => r.tutorId === tutorId && r.studentId === studentId);
+    await delay(200);
+    const existing = mockDb.chatRooms.find(
+      (r) => r.tutorId === tutorId && r.studentId === studentId,
+    );
     if (existing) return { success: true, data: existing } as const;
 
     const room: ChatRoom = {
@@ -100,7 +102,7 @@ export const mockChatService: ChatService = {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    chatRooms.push(room);
+    mockDb.chatRooms.push(room);
     return { success: true, data: room } as const;
   },
 };

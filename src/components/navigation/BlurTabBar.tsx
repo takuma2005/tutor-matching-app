@@ -13,6 +13,7 @@ const tabIcons = {
   Chat: 'chat',
   Lesson: 'school',
   MyPage: 'person',
+  Requests: 'assignment',
 } as const;
 
 const tabLabels = {
@@ -21,6 +22,7 @@ const tabLabels = {
   Chat: 'チャット',
   Lesson: '授業',
   MyPage: 'マイページ',
+  Requests: '申請',
 } as const;
 
 type TabName = keyof typeof tabIcons;

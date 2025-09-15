@@ -6,12 +6,18 @@ import { User, Student } from '@/services/api/types';
 interface AuthContextType {
   user: User | null;
   student: Student | null;
+  role: 'student' | 'tutor' | null;
   isLoading: boolean;
+  needsProfileCompletion: boolean;
   signIn: (userData: MockSignInInput) => Promise<boolean>;
   signUp: (email: string, password: string, userData: Partial<User>) => Promise<boolean>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
   updateProfile: (profileData: Partial<User>) => Promise<boolean>;
+  switchRole: (
+    newRole: 'student' | 'tutor',
+  ) => Promise<{ success: boolean; needsCompletion?: boolean }>;
+  completeProfile: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,7 +47,9 @@ type MockSignInInput = {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [student, setStudent] = useState<Student | null>(null);
+  const [role, setRole] = useState<'student' | 'tutor' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false);
 
   const apiClient = React.useMemo(() => getApiClient(), []);
 
@@ -52,6 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const response = await apiClient.auth.getCurrentUser();
         if (response.success && response.data) {
           setUser(response.data);
+          setRole(response.data.role);
 
           // 生徒プロフィールも取得
           const studentResponse = await apiClient.student.getProfile(response.data.id);
@@ -66,10 +75,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
               id: def.id,
               email: def.email,
               name: def.name,
+              role: 'student',
               created_at: def.created_at,
               updated_at: def.updated_at,
             };
             setUser(mockUser);
+            setRole('student');
             const studentResponse = await apiClient.student.getProfile(mockUser.id);
             if (studentResponse.success) {
               setStudent(studentResponse.data);
@@ -95,11 +106,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         id: userData.id,
         email: `${userData.phoneNumber.replace(/-/g, '')}@example.com`, // 仮のメール
         name: userData.name,
+        role: userData.role,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
 
       setUser(newUser);
+      setRole(userData.role);
 
       // 生徒の場合は学生プロフィールも作成（最小限）
       if (userData.role === 'student') {
@@ -111,6 +124,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           id: userData.id,
           name: userData.name,
           email: newUser.email,
+          role: 'student',
           age: ageNum,
           grade: userData.grade ?? '',
           subjects_interested: [],
@@ -158,6 +172,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await apiClient.auth.signOut();
       setUser(null);
       setStudent(null);
+      setRole(null);
     } catch (error) {
       console.error('サインアウトエラー:', error);
     } finally {
@@ -172,6 +187,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await apiClient.auth.getCurrentUser();
       if (response.success && response.data) {
         setUser(response.data);
+        setRole(response.data.role);
 
         const studentResponse = await apiClient.student.getProfile(response.data.id);
         if (studentResponse.success) {
@@ -203,18 +219,96 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [user],
   );
 
+  const switchRole = React.useCallback(
+    async (
+      newRole: 'student' | 'tutor',
+    ): Promise<{ success: boolean; needsCompletion?: boolean }> => {
+      if (!user) return { success: false };
+
+      try {
+        setIsLoading(true);
+
+        // ユーザーの役割を更新
+        const updatedUser = { ...user, role: newRole, updated_at: new Date().toISOString() };
+        setUser(updatedUser);
+        setRole(newRole);
+
+        // 新しい役割でのプロファイル情報をチェック
+
+        if (newRole === 'student') {
+          // 学生プロファイルを確認/作成
+          const studentResponse = await apiClient.student.getProfile(user.id);
+          if (!studentResponse.success) {
+            // 学生プロファイルが存在しない場合、最小限のプロファイルを作成
+            const newStudent: Student = {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: 'student',
+              age: 18,
+              grade: '',
+              subjects_interested: [],
+              coins: 0,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+            setStudent(newStudent);
+            setNeedsProfileCompletion(true);
+            return { success: true, needsCompletion: true };
+          } else {
+            setStudent(studentResponse.data);
+          }
+        } else if (newRole === 'tutor') {
+          // 先輩プロファイルを確認
+          // TODO: Tutor API実装後に適切に処理
+          setNeedsProfileCompletion(true);
+          return { success: true, needsCompletion: true };
+        }
+
+        return { success: true, needsCompletion: false };
+      } catch (error) {
+        console.error('役割切り替えエラー:', error);
+        return { success: false };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user, apiClient.student],
+  );
+
+  const completeProfile = React.useCallback(() => {
+    setNeedsProfileCompletion(false);
+  }, []);
+
   const value: AuthContextType = React.useMemo(
     () => ({
       user,
       student,
+      role,
       isLoading,
+      needsProfileCompletion,
       signIn,
       signUp,
       signOut,
       refreshUser,
       updateProfile,
+      switchRole,
+      completeProfile,
     }),
-    [user, student, isLoading, signIn, signUp, signOut, refreshUser, updateProfile],
+    [
+      user,
+      student,
+      role,
+      isLoading,
+      needsProfileCompletion,
+      signIn,
+      signUp,
+      signOut,
+      refreshUser,
+      updateProfile,
+      switchRole,
+      completeProfile,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

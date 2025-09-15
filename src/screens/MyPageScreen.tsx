@@ -3,17 +3,19 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 
 import { StandardScreen } from '../components/templates';
+import { useAuth } from '../contexts/AuthContext';
 import { useUser } from '../contexts/UserContext';
 import type { HomeStackParamList } from '../navigation/HomeStackNavigator';
 import type { MyPageStackParamList } from '../navigation/MyPageStackNavigator';
-import type { TabParamList } from '../navigation/TabNavigator';
+import type { StudentTabParamList } from '../navigation/StudentTabNavigator';
+import type { TutorTabParamList } from '../navigation/TutorTabNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 type MyPageNav = CompositeNavigationProp<
-  BottomTabNavigationProp<TabParamList, 'MyPage'>,
+  BottomTabNavigationProp<StudentTabParamList | TutorTabParamList, 'MyPage'>,
   CompositeNavigationProp<
     StackNavigationProp<MyPageStackParamList>,
     StackNavigationProp<HomeStackParamList>
@@ -22,6 +24,33 @@ type MyPageNav = CompositeNavigationProp<
 
 export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) {
   const { user } = useUser();
+  const { role, switchRole } = useAuth();
+
+  const handleRoleSwitch = (newRole: 'student' | 'tutor') => {
+    const currentRoleText = role === 'student' ? '後輩' : '先輩';
+    const newRoleText = newRole === 'student' ? '後輩' : '先輩';
+
+    Alert.alert(
+      '役割を切り替え',
+      `${currentRoleText}から${newRoleText}へ切り替えますか？\n\n切り替え後にプロフィール情報の入力が必要な場合があります。`,
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: '切り替える',
+          onPress: async () => {
+            const result = await switchRole(newRole);
+            if (result.success) {
+              Alert.alert('切り替え完了', `${newRoleText}への切り替えが完了しました！`, [
+                { text: 'OK' },
+              ]);
+            } else {
+              Alert.alert('エラー', '役割の切り替えに失敗しました。');
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <StandardScreen title="マイページ" showBackButton={false}>
@@ -59,6 +88,42 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
           >
             <MaterialIcons name="arrow-forward-ios" size={16} color={colors.gray400} />
           </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* 役割切り替えセクション */}
+      <View style={styles.roleSwitchCard}>
+        <View style={styles.roleHeader}>
+          <MaterialIcons name="swap-horiz" size={24} color={colors.primary} />
+          <View style={styles.roleInfo}>
+            <Text style={styles.roleTitle}>現在の役割</Text>
+            <Text style={styles.currentRole}>
+              {role === 'student' ? '後輩として利用中' : '先輩として登録中'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.roleSwitchButtons}>
+          {role !== 'tutor' && (
+            <TouchableOpacity style={styles.switchButton} onPress={() => handleRoleSwitch('tutor')}>
+              <MaterialIcons name="school" size={20} color={colors.secondary} />
+              <Text style={[styles.switchButtonText, { color: colors.secondary }]}>
+                先輩として登録
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {role !== 'student' && (
+            <TouchableOpacity
+              style={styles.switchButton}
+              onPress={() => handleRoleSwitch('student')}
+            >
+              <MaterialIcons name="person" size={20} color={colors.primary} />
+              <Text style={[styles.switchButtonText, { color: colors.primary }]}>
+                後輩として利用
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -273,5 +338,60 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: spacing.xl,
+  },
+  // 役割切り替えセクション
+  roleSwitchCard: {
+    backgroundColor: colors.white,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.gray200,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  roleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  roleInfo: {
+    marginLeft: spacing.md,
+    flex: 1,
+  },
+  roleTitle: {
+    fontSize: typography.sizes?.body || 16,
+    fontWeight: '600',
+    color: colors.gray900,
+    marginBottom: spacing.xs / 2,
+  },
+  currentRole: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray600,
+  },
+  roleSwitchButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  switchButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gray50,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+  },
+  switchButtonText: {
+    fontSize: typography.sizes?.body || 14,
+    fontWeight: '600',
+    marginLeft: spacing.xs,
   },
 });

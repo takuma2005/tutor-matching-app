@@ -58,6 +58,7 @@ class MockAuthService implements AuthService {
       id: `user-${Date.now()}`,
       name: userData.name || 'Unknown User',
       email,
+      role: 'student', // デフォルトでstudentとして設定
       avatar_url: userData.avatar_url,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
