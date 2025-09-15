@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 
 import TutorCard from '../components/tutor/TutorCard';
@@ -30,69 +30,96 @@ type Props = {
 export default function FavoriteScreen({ navigation }: Props) {
   const { favorites, addFavorite, removeFavorite, isFavorite } = useFavorites();
   const { user: authUser, student } = useAuth();
-  const [, setTutors] = useState<Tutor[]>([]);
-  const [favoriteTutors, setFavoriteTutors] = useState<Tutor[]>([]);
+  const [allTutors, setAllTutors] = useState<Tutor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 初回ロード時のスナップショットで一覧を構築し、その後は即時には消さない
   useEffect(() => {
+    let isMounted = true;
     const api = getApiClient();
-    setIsLoading(true);
 
-    api.student
-      .searchTutors(undefined, 1, 100)
-      .then((tutorsResp) => {
+    const loadTutors = async () => {
+      setIsLoading(true);
+      try {
+        const tutorsResp = await api.student.searchTutors(undefined, 1, 100);
+        if (!isMounted) return;
         if (tutorsResp?.success) {
-          const allTutors = tutorsResp.data;
-          setTutors(allTutors);
-
-          const favTutors = favorites
-            .map((fav) => allTutors.find((tutor) => tutor.id === fav.tutorId))
-            .filter((tutor): tutor is Tutor => tutor !== undefined)
-            .sort((a, b) => {
-              const favA = favorites.find((f) => f.tutorId === a.id);
-              const favB = favorites.find((f) => f.tutorId === b.id);
-              return (favB?.addedAt.getTime() || 0) - (favA?.addedAt.getTime() || 0);
-            });
-
-          setFavoriteTutors(favTutors);
+          setAllTutors(tutorsResp.data);
+        } else {
+          setAllTutors([]);
         }
-      })
-      .finally(() => setIsLoading(false));
-  }, [favorites]);
+      } catch {
+        if (isMounted) {
+          setAllTutors([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
 
-  const handleTutorPress = (tutorId: string) => {
-    navigation.navigate('TutorDetail', { tutorId });
-  };
+    void loadTutors();
 
-  const handleToggleFavorite = (tutorId: string) => {
-    if (isFavorite(tutorId)) {
-      removeFavorite(tutorId);
-    } else {
-      const sid = student?.id ?? authUser?.id ?? 'local';
-      addFavorite(tutorId, sid);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const favoriteTutors = useMemo(() => {
+    if (favorites.length === 0 || allTutors.length === 0) {
+      return [];
     }
-  };
 
-  const renderTutor = ({ item }: { item: Tutor }) => (
-    <View style={styles.tutorCardContainer}>
-      <TutorCard
-        id={item.id}
-        name={item.name}
-        school={item.school ?? ''}
-        grade={item.grade ?? ''}
-        subjects={item.subjects_taught}
-        hourlyRate={item.hourly_rate}
-        rating={item.rating}
-        totalLessons={item.total_lessons}
-        onlineAvailable={item.online_available ?? false}
-        avatarUrl={item.avatar_url}
-        isFavorite={isFavorite(item.id)}
-        onFavoritePress={() => handleToggleFavorite(item.id)}
-        onPress={() => handleTutorPress(item.id)}
-        onDetailPress={() => handleTutorPress(item.id)}
-      />
-    </View>
+    const tutorById = new Map(allTutors.map((tutor) => [tutor.id, tutor]));
+
+    return [...favorites]
+      .sort((a, b) => b.addedAt.getTime() - a.addedAt.getTime())
+      .map((favorite) => tutorById.get(favorite.tutorId))
+      .filter((tutor): tutor is Tutor => Boolean(tutor));
+  }, [allTutors, favorites]);
+
+  const handleTutorPress = useCallback(
+    (tutorId: string) => {
+      navigation.navigate('TutorDetail', { tutorId });
+    },
+    [navigation],
+  );
+
+  const resolvedStudentId = student?.id ?? authUser?.id ?? 'local';
+
+  const handleToggleFavorite = useCallback(
+    (tutorId: string) => {
+      if (isFavorite(tutorId)) {
+        removeFavorite(tutorId);
+      } else {
+        addFavorite(tutorId, resolvedStudentId);
+      }
+    },
+    [isFavorite, removeFavorite, addFavorite, resolvedStudentId],
+  );
+
+  const renderTutor = useCallback(
+    ({ item }: { item: Tutor }) => (
+      <View style={styles.tutorCardContainer}>
+        <TutorCard
+          id={item.id}
+          name={item.name}
+          school={item.school ?? ''}
+          grade={item.grade ?? ''}
+          subjects={item.subjects_taught}
+          hourlyRate={item.hourly_rate}
+          rating={item.rating}
+          totalLessons={item.total_lessons}
+          onlineAvailable={item.online_available ?? false}
+          avatarUrl={item.avatar_url}
+          isFavorite={isFavorite(item.id)}
+          onFavoritePress={() => handleToggleFavorite(item.id)}
+          onPress={() => handleTutorPress(item.id)}
+          onDetailPress={() => handleTutorPress(item.id)}
+        />
+      </View>
+    ),
+    [handleToggleFavorite, handleTutorPress, isFavorite],
   );
 
   const renderEmptyState = () => (

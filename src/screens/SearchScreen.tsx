@@ -1,7 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
 
 import TutorCard from '../components/tutor/TutorCard';
@@ -21,6 +20,26 @@ type SearchScreenNavigationProp = StackNavigationProp<SearchStackParamList, 'Sea
 type Props = {
   navigation: SearchScreenNavigationProp;
 };
+
+type FilterTab = 'subject' | 'rate' | 'other' | 'sort';
+
+const SUBJECT_OPTIONS = ['数学', '英語', '物理', '化学', '生物', '国語', '現代文'] as const;
+
+const FILTER_TABS: { key: FilterTab; label: string }[] = [
+  { key: 'subject', label: '科目' },
+  { key: 'rate', label: '料金' },
+  { key: 'other', label: 'その他' },
+  { key: 'sort', label: '並び替え' },
+];
+
+const SORT_OPTIONS: { key: SortOption; label: string }[] = [
+  { key: 'recommended', label: 'おすすめ順' },
+  { key: 'price_low', label: '料金安い順' },
+  { key: 'price_high', label: '料金高い順' },
+  { key: 'rating', label: '評価順' },
+  { key: 'experience', label: '経験順' },
+  { key: 'recent', label: '新しい順' },
+];
 
 export default function SearchScreen({ navigation }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -44,45 +63,43 @@ export default function SearchScreen({ navigation }: Props) {
     onlineOnly: false,
   });
   const [showFilters, setShowFilters] = useState(false);
-  const [activeFilterTab, setActiveFilterTab] = useState<'subject' | 'rate' | 'other' | 'sort'>(
-    'subject',
-  );
-
-  const subjects = ['数学', '英語', '物理', '化学', '生物', '国語', '現代文'];
-
-  useFocusEffect(
-    React.useCallback(() => {
-      return undefined;
-    }, []),
-  );
+  const [activeFilterTab, setActiveFilterTab] = useState<FilterTab>('subject');
 
   // フィルタリング処理は useTutorSearch 内へ集約済み
 
-  const handleTutorPress = (tutorId: string) => {
-    navigation.navigate('TutorDetail', { tutorId });
-  };
+  const handleTutorPress = useCallback(
+    (tutorId: string) => {
+      navigation.navigate('TutorDetail', { tutorId });
+    },
+    [navigation],
+  );
 
-  const renderTutor = ({ item }: { item: Tutor }) => (
-    <TutorCard
-      id={item.id}
-      name={item.name}
-      school={item.school ?? ''}
-      grade={item.grade ?? ''}
-      subjects={item.subjects_taught}
-      hourlyRate={item.hourly_rate}
-      rating={item.rating}
-      totalLessons={item.total_lessons}
-      onlineAvailable={item.online_available ?? false}
-      avatarUrl={item.avatar_url}
-      isFavorite={isFavorite(item.id)}
-      onPress={() => handleTutorPress(item.id)}
-      onFavoritePress={() => {
-        if (authUser?.id) {
-          toggleFavorite(item.id, authUser.id);
-        }
-      }}
-      onDetailPress={() => handleTutorPress(item.id)}
-    />
+  const authUserId = authUser?.id;
+
+  const renderTutor = useCallback(
+    ({ item }: { item: Tutor }) => (
+      <TutorCard
+        id={item.id}
+        name={item.name}
+        school={item.school ?? ''}
+        grade={item.grade ?? ''}
+        subjects={item.subjects_taught}
+        hourlyRate={item.hourly_rate}
+        rating={item.rating}
+        totalLessons={item.total_lessons}
+        onlineAvailable={item.online_available ?? false}
+        avatarUrl={item.avatar_url}
+        isFavorite={isFavorite(item.id)}
+        onPress={() => handleTutorPress(item.id)}
+        onFavoritePress={() => {
+          if (authUserId) {
+            toggleFavorite(item.id, authUserId);
+          }
+        }}
+        onDetailPress={() => handleTutorPress(item.id)}
+      />
+    ),
+    [authUserId, handleTutorPress, isFavorite, toggleFavorite],
   );
 
   const renderHeader = () => (
@@ -101,7 +118,7 @@ export default function SearchScreen({ navigation }: Props) {
         </View>
         <TouchableOpacity
           style={[styles.filterButton, showFilters && styles.filterButtonActive]}
-          onPress={() => setShowFilters(!showFilters)}
+          onPress={() => setShowFilters((prev) => !prev)}
         >
           <MaterialIcons
             name="tune"
@@ -116,18 +133,14 @@ export default function SearchScreen({ navigation }: Props) {
         <View style={styles.filtersContainer}>
           {/* Segmented tabs */}
           <View style={styles.tabsRow}>
-            {(['subject', 'rate', 'other', 'sort'] as const).map((key) => (
+            {FILTER_TABS.map(({ key, label }) => (
               <TouchableOpacity
                 key={key}
                 style={[styles.tabItem, activeFilterTab === key && styles.tabItemActive]}
                 onPress={() => setActiveFilterTab(key)}
               >
                 <Text style={[styles.tabLabel, activeFilterTab === key && styles.tabLabelActive]}>
-                  {
-                    { subject: '科目', rate: '料金', other: 'その他', sort: '並び替え' }[
-                      key as 'subject' | 'rate' | 'other' | 'sort'
-                    ]
-                  }
+                  {label}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -139,7 +152,12 @@ export default function SearchScreen({ navigation }: Props) {
               <View style={styles.subjectTags}>
                 <TouchableOpacity
                   style={[styles.subjectTag, !filters.subject && styles.subjectTagActive]}
-                  onPress={() => setFilters({ ...filters, subject: '' })}
+                  onPress={() =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      subject: '',
+                    }))
+                  }
                 >
                   <Text
                     style={[styles.subjectTagText, !filters.subject && styles.subjectTagTextActive]}
@@ -147,7 +165,7 @@ export default function SearchScreen({ navigation }: Props) {
                     全て
                   </Text>
                 </TouchableOpacity>
-                {subjects.map((subject) => (
+                {SUBJECT_OPTIONS.map((subject) => (
                   <TouchableOpacity
                     key={subject}
                     style={[
@@ -155,10 +173,10 @@ export default function SearchScreen({ navigation }: Props) {
                       filters.subject === subject && styles.subjectTagActive,
                     ]}
                     onPress={() =>
-                      setFilters({
-                        ...filters,
-                        subject: filters.subject === subject ? '' : subject,
-                      })
+                      setFilters((prev) => ({
+                        ...prev,
+                        subject: prev.subject === subject ? '' : subject,
+                      }))
                     }
                   >
                     <Text
@@ -179,7 +197,9 @@ export default function SearchScreen({ navigation }: Props) {
             <RangeSlider
               minValue={filters.minRate}
               maxValue={filters.maxRate}
-              onValueChange={(min, max) => setFilters({ ...filters, minRate: min, maxRate: max })}
+              onValueChange={(min, max) =>
+                setFilters((prev) => ({ ...prev, minRate: min, maxRate: max }))
+              }
             />
           )}
 
@@ -189,7 +209,7 @@ export default function SearchScreen({ navigation }: Props) {
               <View style={styles.toggleContainer}>
                 <TouchableOpacity
                   style={[styles.toggle, filters.onlineOnly && styles.toggleActive]}
-                  onPress={() => setFilters({ ...filters, onlineOnly: !filters.onlineOnly })}
+                  onPress={() => setFilters((prev) => ({ ...prev, onlineOnly: !prev.onlineOnly }))}
                 >
                   <MaterialIcons
                     name={filters.onlineOnly ? 'check-box' : 'check-box-outline-blank'}
@@ -206,18 +226,11 @@ export default function SearchScreen({ navigation }: Props) {
             <>
               <Text style={styles.filterTitle}>並び替え</Text>
               <View style={styles.subjectTags}>
-                {[
-                  { key: 'recommended', label: 'おすすめ順' },
-                  { key: 'price_low', label: '料金安い順' },
-                  { key: 'price_high', label: '料金高い順' },
-                  { key: 'rating', label: '評価順' },
-                  { key: 'experience', label: '経験順' },
-                  { key: 'recent', label: '新しい順' },
-                ].map((sort) => (
+                {SORT_OPTIONS.map((sort) => (
                   <TouchableOpacity
                     key={sort.key}
                     style={[styles.subjectTag, sortBy === sort.key && styles.subjectTagActive]}
-                    onPress={() => setSortBy(sort.key as SortOption)}
+                    onPress={() => setSortBy(sort.key)}
                   >
                     <Text
                       style={[
