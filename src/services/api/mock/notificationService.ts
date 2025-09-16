@@ -7,6 +7,7 @@ export type NotificationType =
   | 'match_request_received'
   | 'match_request_approved'
   | 'match_request_rejected'
+  | 'match_request_cancelled'
   | 'lesson_request_received'
   | 'lesson_request_approved'
   | 'lesson_request_rejected'
@@ -223,6 +224,70 @@ export class MockNotificationService {
       'match_request_approved',
       'マッチング承認',
       `${tutorName}先輩が申請を承認しました！チャットを開始できます。`,
+      matchId,
+      'match',
+    );
+  }
+
+  // マッチング拒否通知（後輩向け）
+  async createMatchRejectionNotificationForStudent(
+    studentId: string,
+    tutorName: string,
+    matchId: string,
+  ): Promise<void> {
+    await this.createNotification(
+      studentId,
+      'match_request_rejected',
+      'マッチング申請が拒否されました',
+      `${tutorName}先輩が申請を拒否しました。コインは返金されました。`,
+      matchId,
+      'match',
+    );
+  }
+
+  // マッチング拒否通知（先輩向け）
+  async createMatchRejectionNotificationForTutor(
+    tutorId: string,
+    studentName: string,
+    matchId: string,
+  ): Promise<void> {
+    await this.createNotification(
+      tutorId,
+      'match_request_rejected',
+      '申請を拒否しました',
+      `${studentName}さんの申請を拒否しました。`,
+      matchId,
+      'match',
+    );
+  }
+
+  // マッチングキャンセル通知（後輩向け）
+  async createMatchCancellationNotificationForStudent(
+    studentId: string,
+    tutorName: string,
+    matchId: string,
+  ): Promise<void> {
+    await this.createNotification(
+      studentId,
+      'match_request_cancelled',
+      'マッチング申請をキャンセルしました',
+      `${tutorName}先輩への申請をキャンセルし、コインを返金しました。`,
+      matchId,
+      'match',
+    );
+  }
+
+  // マッチングキャンセル通知（先輩向け）
+  async createMatchCancellationNotificationForTutor(
+    tutorId: string,
+    studentName: string,
+    matchId: string,
+  ): Promise<void> {
+    await this.createNotification(
+      tutorId,
+      'match_request_cancelled',
+      '申請がキャンセルされました',
+      `${studentName}さんが申請をキャンセルしました。`,
       matchId,
       'match',
     );
