@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import 'react-native-get-random-values';
 import uuid from 'react-native-uuid';
+
+import { useAuth } from '@/contexts/AuthContext';
+import { mockStudents } from '@/services/api/mock/data';
 
 // お気に入りの型定義
 export type FavoriteTutor = {
@@ -26,17 +29,19 @@ type FavoritesContextType = {
 const FAVORITES_STORAGE_KEY = '@senpai:favorites';
 
 // 旧モックお気に入り（初回のみのシードに使用）
+const DEFAULT_STUDENT_ID = mockStudents[0]?.id ?? 'student-1';
+
 const seedFavorites: FavoriteTutor[] = [
   {
     id: 'fav_seed_1',
     tutorId: '1',
-    studentId: 'student-1',
+    studentId: DEFAULT_STUDENT_ID,
     addedAt: new Date('2024-01-15T10:00:00'),
   },
   {
     id: 'fav_seed_3',
     tutorId: '3',
-    studentId: 'student-1',
+    studentId: DEFAULT_STUDENT_ID,
     addedAt: new Date('2024-01-14T15:30:00'),
   },
 ];
@@ -77,39 +82,64 @@ async function saveFavoritesToStorage(items: FavoriteTutor[]): Promise<void> {
   }
 }
 
+function areFavoriteListsEqual(a: FavoriteTutor[], b: FavoriteTutor[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((fav, index) => {
+    const other = b[index];
+    return (
+      fav.id === other.id &&
+      fav.tutorId === other.tutorId &&
+      fav.studentId === other.studentId &&
+      fav.addedAt.getTime() === other.addedAt.getTime()
+    );
+  });
+}
+
 // プロバイダーコンポーネント
 export function FavoritesProvider({ children }: { children: ReactNode }) {
-  const [favorites, setFavorites] = useState<FavoriteTutor[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteTutor[]>(seedFavorites);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { student: authStudent, user: authUser } = useAuth();
+  const currentStudentId = authStudent?.id ?? authUser?.id ?? DEFAULT_STUDENT_ID;
 
   // 初期読み込み（ストレージ→空ならシード）
   useEffect(() => {
-    let mounted = true;
-    (async () => {
+    let active = true;
+
+    const bootstrapFavorites = async () => {
       try {
         const loaded = await loadFavoritesFromStorage();
-        if (mounted) {
-          if (loaded.length > 0) {
-            setFavorites(loaded);
-          } else {
-            setFavorites(seedFavorites);
-            await saveFavoritesToStorage(seedFavorites);
-          }
+        if (!active) return;
+
+        if (loaded.length > 0) {
+          setFavorites((prev) => (areFavoriteListsEqual(prev, loaded) ? prev : loaded));
+        } else {
+          await saveFavoritesToStorage(seedFavorites);
         }
       } catch {
-        if (mounted) setFavorites(seedFavorites);
+        if (active) {
+          await saveFavoritesToStorage(seedFavorites);
+        }
       }
-    })();
+    };
+
+    void bootstrapFavorites();
+
     return () => {
-      mounted = false;
+      active = false;
     };
   }, []);
 
+  const favoritesForCurrent = useMemo(
+    () => favorites.filter((fav) => fav.studentId === currentStudentId),
+    [favorites, currentStudentId],
+  );
+
   // お気に入りかどうかをチェック
   const isFavorite = React.useCallback(
-    (tutorId: string) => favorites.some((fav) => fav.tutorId === tutorId),
-    [favorites],
+    (tutorId: string) => favoritesForCurrent.some((fav) => fav.tutorId === tutorId),
+    [favoritesForCurrent],
   );
 
   // 永続化付き更新
@@ -128,24 +158,33 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   // お気に入りに追加
   const addFavorite = React.useCallback(
     (tutorId: string, studentId: string) => {
+      const targetStudentId = studentId || currentStudentId;
+      if (
+        favoritesForCurrent.some(
+          (fav) => fav.tutorId === tutorId && fav.studentId === targetStudentId,
+        )
+      )
+        return;
       if (isFavorite(tutorId)) return; // 既に追加済みはスキップ
       const newFavorite: FavoriteTutor = {
         id: String(uuid.v4()),
         tutorId,
-        studentId,
+        studentId: targetStudentId,
         addedAt: new Date(),
       };
       updateAndPersist((prev) => [...prev, newFavorite]);
     },
-    [isFavorite, updateAndPersist],
+    [currentStudentId, favoritesForCurrent, isFavorite, updateAndPersist],
   );
 
   // お気に入りから削除
   const removeFavorite = React.useCallback(
     (tutorId: string) => {
-      updateAndPersist((prev) => prev.filter((fav) => fav.tutorId !== tutorId));
+      updateAndPersist((prev) =>
+        prev.filter((fav) => !(fav.tutorId === tutorId && fav.studentId === currentStudentId)),
+      );
     },
-    [updateAndPersist],
+    [currentStudentId, updateAndPersist],
   );
 
   // お気に入りをトグル
@@ -154,10 +193,10 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       if (isFavorite(tutorId)) {
         removeFavorite(tutorId);
       } else {
-        addFavorite(tutorId, studentId);
+        addFavorite(tutorId, studentId || currentStudentId);
       }
     },
-    [isFavorite, removeFavorite, addFavorite],
+    [addFavorite, currentStudentId, isFavorite, removeFavorite],
   );
 
   // お気に入りリストを再読み込み
@@ -180,7 +219,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       toggleFavorite,
       addFavorite,
       removeFavorite,
-      favorites,
+      favorites: favoritesForCurrent,
       isLoading,
       error,
       refreshFavorites,
@@ -190,7 +229,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       toggleFavorite,
       addFavorite,
       removeFavorite,
-      favorites,
+      favoritesForCurrent,
       isLoading,
       error,
       refreshFavorites,

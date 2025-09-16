@@ -200,27 +200,28 @@ export default function NotificationScreen() {
 
   const addDemoNotifications = async () => {
     try {
+      if (!userId) return;
       await Promise.all([
         notificationService.createNotification(
-          'student-1',
+          userId,
           'message_received',
           '新着メッセージ',
           'テスト本文',
         ),
         notificationService.createNotification(
-          'student-1',
+          userId,
           'match_request_received',
           'マッチング申請',
           '田中先輩からの申請が届きました',
         ),
         notificationService.createNotification(
-          'student-1',
+          userId,
           'lesson_request_approved',
           '授業申請承認',
           '英語の授業が承認されました',
         ),
         notificationService.createNotification(
-          'student-1',
+          userId,
           'payment_received',
           '入金',
           'コインの入金が反映されました',

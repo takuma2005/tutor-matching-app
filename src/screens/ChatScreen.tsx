@@ -15,6 +15,7 @@ import {
 import { colors, spacing, typography } from '../styles/theme';
 
 import ScreenContainer from '@/components/common/ScreenContainer';
+import { useAuth } from '@/contexts/AuthContext';
 import { getApiClient } from '@/services/api/mock';
 import type {
   Student,
@@ -50,6 +51,7 @@ export default function ChatScreen({ navigation }: Props) {
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const api = React.useMemo(() => getApiClient(), []);
+  const { student: authStudent, user: authUser } = useAuth();
 
   const loadChatRooms = useCallback(
     async (studentId: string) => {
@@ -66,14 +68,25 @@ export default function ChatScreen({ navigation }: Props) {
 
   useEffect(() => {
     let mounted = true;
+    const studentId = authStudent?.id ?? authUser?.id;
+    if (!studentId) {
+      setCurrentStudent(null);
+      return () => {
+        mounted = false;
+        if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+      };
+    }
     Promise.all([
-      api.student.getProfile('student-1'),
+      api.student.getProfile(studentId),
       api.student.searchTutors(undefined, 1, 200),
     ]).then(async ([profileResp, tutorsResp]) => {
       if (!mounted) return;
       if (profileResp?.success) {
         setCurrentStudent(profileResp.data);
         await loadChatRooms(profileResp.data.id);
+      } else if (authStudent) {
+        setCurrentStudent(authStudent);
+        await loadChatRooms(authStudent.id);
       }
       if (tutorsResp?.success) setTutors(tutorsResp.data);
     });
@@ -81,7 +94,7 @@ export default function ChatScreen({ navigation }: Props) {
       mounted = false;
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     };
-  }, [api, loadChatRooms]);
+  }, [api, authStudent, authUser?.id, loadChatRooms]);
 
   useFocusEffect(
     useCallback(() => {

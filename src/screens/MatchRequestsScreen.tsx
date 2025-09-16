@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Card from '@/components/common/Card';
 import ScreenContainer from '@/components/common/ScreenContainer';
+import { useAuth } from '@/contexts/AuthContext';
 import { getApiClient } from '@/services/api/mock';
 import type { MatchRequest, Tutor } from '@/services/api/types';
 import { colors, spacing, typography, borderRadius } from '@/styles/theme';
@@ -25,12 +26,15 @@ export default function MatchRequestsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
+  const { student, user } = useAuth();
 
   const loadMatchRequests = useCallback(async () => {
     try {
       const api = getApiClient();
       const status = activeTab === 'pending' ? 'pending' : undefined;
-      const response = await api.student.getMatchRequests(status);
+      const studentId = student?.id ?? user?.id;
+      if (!studentId) return;
+      const response = await api.student.getMatchRequests(studentId, status);
 
       if (response.success) {
         // 家庭教師情報を取得
@@ -51,7 +55,7 @@ export default function MatchRequestsScreen() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [activeTab]);
+  }, [activeTab, student?.id, user?.id]);
 
   useFocusEffect(
     useCallback(() => {

@@ -42,7 +42,10 @@ type MockSignInInput = {
   name: string;
   age?: string | number;
   grade?: string;
+  email?: string;
 };
+
+const DEFAULT_MOCK_PASSWORD = 'password123';
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
@@ -97,52 +100,54 @@ export function AuthProvider({ children }: AuthProviderProps) {
     initAuth();
   }, [apiClient]);
 
-  const signIn = React.useCallback(async (userData: MockSignInInput): Promise<boolean> => {
-    try {
-      setIsLoading(true);
+  const signIn = React.useCallback(
+    async (userData: MockSignInInput): Promise<boolean> => {
+      try {
+        setIsLoading(true);
 
-      // モック：ユーザーデータを直接設定（services/api/types.ts に準拠）
-      const newUser: User = {
-        id: userData.id,
-        email: `${userData.phoneNumber.replace(/-/g, '')}@example.com`, // 仮のメール
-        name: userData.name,
-        role: userData.role,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+        const sanitizedPhone = userData.phoneNumber.replace(/[^0-9]/g, '');
+        const email =
+          userData.email ||
+          (sanitizedPhone ? `${sanitizedPhone}@example.com` : `${userData.id}@example.com`);
 
-      setUser(newUser);
-      setRole(userData.role);
+        let response = await apiClient.auth.signIn(email, DEFAULT_MOCK_PASSWORD);
 
-      // 生徒の場合は学生プロフィールも作成（最小限）
-      if (userData.role === 'student') {
-        const ageNum =
-          typeof userData.age === 'number'
-            ? userData.age
-            : Number.parseInt((userData.age ?? '16') as string, 10);
-        const newStudent: Student = {
-          id: userData.id,
-          name: userData.name,
-          email: newUser.email,
-          role: 'student',
-          age: ageNum,
-          grade: userData.grade ?? '',
-          subjects_interested: [],
-          coins: 1000,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        setStudent(newStudent);
+        if (!response.success || !response.data) {
+          const signUpResponse = await apiClient.auth.signUp(email, DEFAULT_MOCK_PASSWORD, {
+            name: userData.name,
+            role: userData.role,
+          });
+
+          if (!signUpResponse.success || !signUpResponse.data) {
+            return false;
+          }
+
+          response = signUpResponse;
+        }
+
+        const authenticatedUser = response.data;
+        setUser(authenticatedUser);
+        setRole(authenticatedUser.role);
+
+        if (authenticatedUser.role === 'student') {
+          const studentResponse = await apiClient.student.getProfile(authenticatedUser.id);
+          if (studentResponse.success) {
+            setStudent(studentResponse.data);
+          }
+        } else {
+          setStudent(null);
+        }
+
+        return true;
+      } catch (error) {
+        console.error('サインインエラー:', error);
+        return false;
+      } finally {
+        setIsLoading(false);
       }
-
-      return true;
-    } catch (error) {
-      console.error('サインインエラー:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [apiClient],
+  );
 
   const signUp = React.useCallback(
     async (email: string, password: string, userData: Partial<User>): Promise<boolean> => {
@@ -152,6 +157,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         if (response.success && response.data) {
           setUser(response.data);
+          setRole(response.data.role);
+
+          if (response.data.role === 'student') {
+            const studentResponse = await apiClient.student.getProfile(response.data.id);
+            if (studentResponse.success) {
+              setStudent(studentResponse.data);
+            }
+          }
           return true;
         }
 
@@ -169,10 +182,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = React.useCallback(async (): Promise<void> => {
     try {
       setIsLoading(true);
-      await apiClient.auth.signOut();
-      setUser(null);
-      setStudent(null);
-      setRole(null);
+      const response = await apiClient.auth.signOut();
+      if (response.success) {
+        setUser(null);
+        setStudent(null);
+        setRole(null);
+        setNeedsProfileCompletion(false);
+      }
     } catch (error) {
       console.error('サインアウトエラー:', error);
     } finally {

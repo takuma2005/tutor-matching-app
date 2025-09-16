@@ -9,6 +9,7 @@ import { colors, spacing, typography, borderRadius, shadows } from '../styles/th
 
 import ScreenContainer from '@/components/common/ScreenContainer';
 import { COIN_PACKAGES, calculateSavings, type CoinPackage } from '@/constants/coinPlans';
+import { useAuth } from '@/contexts/AuthContext';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { CoinTransaction } from '@/services/api/types';
@@ -24,14 +25,23 @@ export default function CoinManagementScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [balance, setBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
+  const { student, user } = useAuth();
 
   React.useEffect(() => {
     const api = getApiClient();
     let mounted = true;
+    const userId = student?.id ?? user?.id;
+    if (!userId) {
+      setBalance(0);
+      setTransactions([]);
+      return () => {
+        mounted = false;
+      };
+    }
     Promise.all([
-      api.student.getProfile('student-1'),
-      api.coin.getBalance('student-1'),
-      api.coin.getTransactionHistory('student-1', 1, 50),
+      api.student.getProfile(userId),
+      api.coin.getBalance(userId),
+      api.coin.getTransactionHistory(userId, 1, 50),
     ])
       .then(([_profileResp, balanceResp, txResp]) => {
         if (!mounted) return;
@@ -43,7 +53,7 @@ export default function CoinManagementScreen({ navigation }: Props) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [student?.id, user?.id]);
 
   // Bottom sheet state
   const [isSheetOpen, setSheetOpen] = useState(false);
@@ -51,6 +61,11 @@ export default function CoinManagementScreen({ navigation }: Props) {
 
   const handlePurchase = (coinPackage: CoinPackage) => {
     const api = getApiClient();
+    const userId = student?.id ?? user?.id;
+    if (!userId) {
+      Alert.alert('エラー', 'コイン残高の取得に失敗しました。ログイン状態を確認してください。');
+      return;
+    }
     const amount = coinPackage.coins + (coinPackage.bonus ?? 0);
     Alert.alert(
       'コイン購入確認',
@@ -63,10 +78,10 @@ export default function CoinManagementScreen({ navigation }: Props) {
             setIsLoading(true);
             try {
               // Use domain manager to keep mock/prod switchable
-              await CoinManager.purchase('student-1', amount, 'pm_card_visa');
+              await CoinManager.purchase(userId, amount, 'pm_card_visa');
               const [bal, hist] = await Promise.all([
-                api.coin.getBalance('student-1'),
-                api.coin.getTransactionHistory('student-1', 1, 50),
+                api.coin.getBalance(userId),
+                api.coin.getTransactionHistory(userId, 1, 50),
               ]);
               if (bal.success) {
                 setBalance(bal.data.balance);

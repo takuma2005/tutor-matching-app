@@ -198,39 +198,36 @@ class MockStudentService implements StudentService {
   }
 
   async getLessons(
-    filters?: LessonSearchFilters,
+    studentId: string,
+    filters: LessonSearchFilters = {},
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedResponse<Lesson>> {
     await delay(350);
 
-    let filteredLessons = [...this.lessons];
+    let filteredLessons = this.lessons.filter((lesson) => lesson.student_id === studentId);
 
     // フィルタリング適用
-    if (filters) {
-      if (filters.status) {
-        filteredLessons = filteredLessons.filter((lesson) => lesson.status === filters.status);
-      }
+    if (filters.status) {
+      filteredLessons = filteredLessons.filter((lesson) => lesson.status === filters.status);
+    }
 
-      if (filters.subject) {
-        filteredLessons = filteredLessons.filter((lesson) =>
-          lesson.subject.toLowerCase().includes(filters.subject!.toLowerCase()),
-        );
-      }
+    if (filters.subject) {
+      filteredLessons = filteredLessons.filter((lesson) =>
+        lesson.subject.toLowerCase().includes(filters.subject!.toLowerCase()),
+      );
+    }
 
-      if (filters.date_from) {
-        const fromDate = new Date(filters.date_from);
-        filteredLessons = filteredLessons.filter(
-          (lesson) => new Date(lesson.scheduled_at) >= fromDate,
-        );
-      }
+    if (filters.date_from) {
+      const fromDate = new Date(filters.date_from);
+      filteredLessons = filteredLessons.filter(
+        (lesson) => new Date(lesson.scheduled_at) >= fromDate,
+      );
+    }
 
-      if (filters.date_to) {
-        const toDate = new Date(filters.date_to);
-        filteredLessons = filteredLessons.filter(
-          (lesson) => new Date(lesson.scheduled_at) <= toDate,
-        );
-      }
+    if (filters.date_to) {
+      const toDate = new Date(filters.date_to);
+      filteredLessons = filteredLessons.filter((lesson) => new Date(lesson.scheduled_at) <= toDate);
     }
 
     // 日時順でソート（新しい順）
@@ -315,17 +312,18 @@ class MockStudentService implements StudentService {
 
   // マッチング関連メソッド
   async sendMatchRequest(
+    studentId: string,
     tutorId: string,
     message: string,
     scheduleNote?: string,
   ): Promise<ApiResponse<MatchRequest>> {
-    // TODO: 現在のユーザーIDを取得する方法を実装
-    const studentId = 'student-1'; // 仮の実装
     return this.matchingService.sendMatchRequest(studentId, tutorId, message, scheduleNote);
   }
 
-  async getMatchRequests(status?: MatchStatus): Promise<ApiResponse<MatchRequest[]>> {
-    const studentId = 'student-1'; // 仮の実装
+  async getMatchRequests(
+    studentId: string,
+    status?: MatchStatus,
+  ): Promise<ApiResponse<MatchRequest[]>> {
     return this.matchingService.getStudentMatchRequests(studentId, status);
   }
 

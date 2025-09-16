@@ -69,18 +69,39 @@ export const mockChatService: ChatService = {
     return { success: true, data: newMsg } as const;
   },
 
-  async updateMessageStatus(messageId: string, status: MessageStatus) {
+  async updateMessageStatus(messageId: string, status: MessageStatus, userId?: string) {
     // Repository は status 更新APIを持たないため、Service 層で上書き管理
     overlayStatus.set(messageId, status);
-    // 直近のメッセージ実体を取得して返す（簡易）
-    const rooms = await repo.getChatRooms('student-1'); // 簡易: 実際には現在ユーザーIDが必要
-    for (const room of rooms) {
-      const msgs = await repo.listMessages(room.id, { limit: 50 });
+
+    const roomIds = new Set<string>();
+
+    if (userId) {
+      const rooms = await repo.getChatRooms(userId);
+      rooms.forEach((room) => roomIds.add(room.id));
+    }
+
+    if (roomIds.size === 0) {
+      const studentRooms = await Promise.all(
+        mockDb.students.map((student) => repo.getChatRooms(student.id)),
+      );
+      studentRooms.flat().forEach((room) => roomIds.add(room.id));
+    }
+
+    if (roomIds.size === 0) {
+      const tutorRooms = await Promise.all(
+        mockDb.tutors.map((tutor) => repo.getChatRooms(tutor.id)),
+      );
+      tutorRooms.flat().forEach((room) => roomIds.add(room.id));
+    }
+
+    for (const roomId of roomIds) {
+      const msgs = await repo.listMessages(roomId, { limit: 50 });
       const found = msgs.find((m) => m.id === messageId);
       if (found) {
         return { success: true, data: { ...found, status } } as const;
       }
     }
+
     return {
       success: false,
       error: 'MessageNotFound',

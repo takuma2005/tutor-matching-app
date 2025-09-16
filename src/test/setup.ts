@@ -11,7 +11,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
-jest.mock('@expo/vector-icons', () => ({ MaterialIcons: 'MaterialIcons' }));
+jest.mock('@expo/vector-icons', () => ({ MaterialIcons: 'MaterialIcons' }), { virtual: true });
 jest.mock('@react-native-community/datetimepicker', () => 'DateTimePicker');
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: 'LinearGradient' }));
 
