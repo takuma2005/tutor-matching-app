@@ -1,77 +1,232 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 
 import { StandardScreen } from '../../components/templates';
 import { colors, spacing, typography } from '../../styles/theme';
 
-export default function MatchRequestDetailScreen() {
-  // TODO: 後でroute.paramsから申請IDを受け取り、APIから詳細を取得
-  const mockRequest = {
-    id: '1',
-    studentName: '田中花子',
-    subject: '数学',
-    message:
-      '数学の微積分を基礎から教えてほしいです。特に応用問題が苦手で、解法のコツを教えていただけると嬉しいです。',
-    scheduleNote:
-      '週に2回、土日の午前と水曜日の午後を希望します。最初の1月は基礎から始めたいです。',
-    status: 'pending',
-    createdAt: '2024-01-20',
-  };
+import type { RequestStackParamList } from '@/navigation/RequestStackNavigator';
+import { getApiClient, mockApiClient } from '@/services/api/mock';
+import type { MatchRequest, Student } from '@/services/api/types';
 
-  const handleApprove = () => {
-    Alert.alert('申請を承認', `${mockRequest.studentName}さんの申請を承認しますか？`, [
+type RequestDetailRoute = RouteProp<RequestStackParamList, 'MatchRequestDetail'>;
+
+export default function MatchRequestDetailScreen() {
+  const navigation = useNavigation();
+  const route = useRoute<RequestDetailRoute>();
+  const [request, setRequest] = useState<MatchRequest | null>(null);
+  const [student, setStudent] = useState<Student | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const loadRequest = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const api = getApiClient() as typeof mockApiClient;
+      const response = await api.tutor.getMatchRequests();
+      if (!response.success) {
+        throw new Error(response.error || '申請の取得に失敗しました。');
+      }
+      const found = response.data.find((item: MatchRequest) => item.id === route.params.requestId);
+      if (!found) {
+        throw new Error('指定された申請が見つかりませんでした。');
+      }
+      setRequest(found);
+      const studentResponse = await api.student.getProfile(found.student_id);
+      if (studentResponse.success) {
+        setStudent(studentResponse.data);
+      } else {
+        setStudent(null);
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        'エラー',
+        error instanceof Error ? error.message : '申請情報の取得に失敗しました。',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [navigation, route.params.requestId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadRequest().catch(() => {});
+    }, [loadRequest]),
+  );
+
+  const handleApprove = useCallback(() => {
+    if (!request) return;
+    Alert.alert('申請を承認', `${student?.name ?? '後輩'}さんの申請を承認しますか？`, [
       { text: 'キャンセル', style: 'cancel' },
       {
         text: '承認する',
-        onPress: () => {
-          // TODO: APIクライアントで承認処理
-          Alert.alert('承認完了', '申請を承認しました');
+        onPress: async () => {
+          try {
+            setIsProcessing(true);
+            const api = getApiClient() as typeof mockApiClient;
+            const response = await api.tutor.approveMatchRequest(request.id);
+            if (response.success) {
+              setRequest(response.data);
+              Alert.alert('承認完了', '申請を承認しました。', [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.goBack(),
+                },
+              ]);
+            } else {
+              Alert.alert('エラー', response.error || '承認処理に失敗しました。');
+            }
+          } catch {
+            Alert.alert('エラー', '承認処理中に問題が発生しました。');
+          } finally {
+            setIsProcessing(false);
+          }
         },
       },
     ]);
-  };
+  }, [navigation, request, student?.name]);
 
-  const handleReject = () => {
-    Alert.alert('申請を拒否', `${mockRequest.studentName}さんの申請を拒否しますか？`, [
+  const handleReject = useCallback(() => {
+    if (!request) return;
+    Alert.alert('申請を拒否', `${student?.name ?? '後輩'}さんの申請を拒否しますか？`, [
       { text: 'キャンセル', style: 'cancel' },
       {
         text: '拒否する',
         style: 'destructive',
-        onPress: () => {
-          // TODO: APIクライアントで拒否処理
-          Alert.alert('拒否完了', '申請を拒否しました');
+        onPress: async () => {
+          try {
+            setIsProcessing(true);
+            const api = getApiClient() as typeof mockApiClient;
+            const response = await api.tutor.rejectMatchRequest(request.id);
+            if (response.success) {
+              setRequest(response.data);
+              Alert.alert('拒否完了', '申請を拒否しました。', [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.goBack(),
+                },
+              ]);
+            } else {
+              Alert.alert('エラー', response.error || '拒否処理に失敗しました。');
+            }
+          } catch {
+            Alert.alert('エラー', '拒否処理中に問題が発生しました。');
+          } finally {
+            setIsProcessing(false);
+          }
         },
       },
     ]);
-  };
+  }, [navigation, request, student?.name]);
+
+  const formattedDate = useMemo(() => {
+    if (!request) return '';
+    const date = new Date(request.created_at);
+    return date.toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }, [request]);
+
+  const statusMeta = useMemo(() => {
+    if (!request) return { label: '', color: colors.gray500 };
+    switch (request.status) {
+      case 'pending':
+        return { label: '承認待ち', color: colors.warning };
+      case 'approved':
+        return { label: '承認済み', color: colors.success };
+      case 'rejected':
+        return { label: '拒否', color: colors.error };
+      case 'cancelled':
+        return { label: 'キャンセル', color: colors.gray500 };
+      case 'expired':
+        return { label: '期限切れ', color: colors.gray400 };
+      default:
+        return { label: request.status, color: colors.gray500 };
+    }
+  }, [request]);
+
+  if (isLoading) {
+    return (
+      <StandardScreen title="申請詳細" showBackButton>
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </StandardScreen>
+    );
+  }
+
+  if (!request) {
+    return null;
+  }
 
   return (
     <StandardScreen title="申請詳細" showBackButton>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
-          <Text style={styles.studentName}>{mockRequest.studentName}</Text>
-          <Text style={styles.subject}>科目: {mockRequest.subject}</Text>
-          <Text style={styles.date}>申請日: {mockRequest.createdAt}</Text>
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.studentName}>{student?.name ?? '不明な後輩'}</Text>
+              <Text style={styles.studentMeta}>{student?.grade}</Text>
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: statusMeta.color + '20' }]}>
+              <Text style={[styles.statusText, { color: statusMeta.color }]}>
+                {statusMeta.label}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.metaText}>申請ID: {request.id}</Text>
+          <Text style={styles.date}>申請日: {formattedDate}</Text>
+          <Text style={styles.date}>必要コイン: {request.coin_cost}コイン</Text>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>メッセージ</Text>
-          <Text style={styles.messageText}>{mockRequest.message}</Text>
+          <Text style={styles.messageText}>{request.message}</Text>
         </View>
 
-        {mockRequest.scheduleNote && (
+        {request.schedule_note && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>希望スケジュール</Text>
-            <Text style={styles.scheduleText}>{mockRequest.scheduleNote}</Text>
+            <Text style={styles.scheduleText}>{request.schedule_note}</Text>
           </View>
         )}
 
-        {mockRequest.status === 'pending' && (
+        {request.status === 'pending' && (
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.approveButton} onPress={handleApprove}>
-              <Text style={styles.approveButtonText}>承認する</Text>
+            <TouchableOpacity
+              style={[styles.approveButton, isProcessing && styles.disabledButton]}
+              onPress={handleApprove}
+              disabled={isProcessing}
+            >
+              <Text style={styles.approveButtonText}>
+                {isProcessing ? '処理中...' : '承認する'}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.rejectButton} onPress={handleReject}>
+            <TouchableOpacity
+              style={[styles.rejectButton, isProcessing && styles.disabledButton]}
+              onPress={handleReject}
+              disabled={isProcessing}
+            >
               <Text style={styles.rejectButtonText}>拒否する</Text>
             </TouchableOpacity>
           </View>
@@ -86,6 +241,11 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.md,
   },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   card: {
     backgroundColor: colors.white,
     padding: spacing.lg,
@@ -97,21 +257,31 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
   studentName: {
     fontSize: typography.sizes?.h3 || 20,
     fontWeight: '600',
     color: colors.gray900,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.xs / 2,
   },
-  subject: {
-    fontSize: typography.sizes?.body || 16,
-    color: colors.primary,
-    fontWeight: '500',
-    marginBottom: spacing.xs,
+  studentMeta: {
+    fontSize: typography.sizes?.caption || 12,
+    color: colors.gray500,
   },
   date: {
     fontSize: typography.sizes?.caption || 12,
+    color: colors.gray600,
+    marginTop: spacing.xs / 2,
+  },
+  metaText: {
+    fontSize: typography.sizes?.caption || 12,
     color: colors.gray500,
+    marginBottom: spacing.xs,
   },
   sectionTitle: {
     fontSize: typography.sizes?.h4 || 18,
@@ -157,6 +327,18 @@ const styles = StyleSheet.create({
   rejectButtonText: {
     color: colors.white,
     fontSize: typography.sizes?.body || 16,
+    fontWeight: '600',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  statusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: 20,
+  },
+  statusText: {
+    fontSize: 12,
     fontWeight: '600',
   },
 });

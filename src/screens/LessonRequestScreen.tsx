@@ -1,9 +1,10 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { format as formatDateFns } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   View,
@@ -24,7 +25,7 @@ import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import ScreenContainer from '@/components/common/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { CoinManager } from '@/domain/coin/coinManager';
-import { getApiClient } from '@/services/api/mock';
+import { getApiClient, mockApiClient } from '@/services/api/mock';
 import type { Tutor, Student, Lesson } from '@/services/api/types';
 
 type Props = {
@@ -35,6 +36,12 @@ type Props = {
     };
   };
   navigation: NavigationProp<ParamListBase>;
+};
+
+type NavigationLike = {
+  navigate?: NavigationProp<ParamListBase>['navigate'];
+  getParent?: () => NavigationLike | undefined | null;
+  getState?: () => { routeNames?: string[] } | undefined;
 };
 
 type LessonRequest = {
@@ -103,9 +110,27 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const { student: authStudent, user: authUser } = useAuth();
+  const api = React.useMemo(() => getApiClient() as typeof mockApiClient, []);
+
+  const loadStudentProfile = useCallback(async () => {
+    const studentId = authStudent?.id ?? authUser?.id;
+    if (!studentId) {
+      setCurrentStudent(null);
+      return;
+    }
+    try {
+      const profileResp = await api.student.getProfile(studentId);
+      if (profileResp?.success) {
+        setCurrentStudent(profileResp.data);
+      } else if (authStudent) {
+        setCurrentStudent(authStudent);
+      }
+    } catch (error) {
+      console.error('Failed to load student profile:', error);
+    }
+  }, [api, authStudent, authUser?.id]);
 
   React.useEffect(() => {
-    const api = getApiClient();
     let mounted = true;
     const studentId = authStudent?.id ?? authUser?.id;
     Promise.all([
@@ -122,7 +147,17 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
     return () => {
       mounted = false;
     };
-  }, [authStudent, authUser?.id, tutorId]);
+  }, [api, authStudent, authUser?.id, tutorId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const studentId = authStudent?.id ?? authUser?.id;
+      if (studentId) {
+        CoinManager.syncBalance(studentId).catch(() => {});
+      }
+      loadStudentProfile().catch(() => {});
+    }, [authStudent?.id, authUser?.id, loadStudentProfile]),
+  );
 
   const [request, setRequest] = useState<LessonRequest>({
     subject: tutor?.subjects_taught[0] || '数学',
@@ -153,6 +188,35 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const openCoinManagement = useCallback((): boolean => {
+    const tryNavigate = (nav: NavigationLike | null | undefined) => {
+      if (!nav || typeof nav.navigate !== 'function') {
+        return false;
+      }
+      const state = typeof nav.getState === 'function' ? nav.getState() : undefined;
+      if (state?.routeNames?.includes('CoinManagement')) {
+        (nav.navigate as unknown as (routeName: string, params?: unknown) => void)(
+          'CoinManagement',
+        );
+        return true;
+      }
+      if (state?.routeNames?.includes('Home')) {
+        (nav.navigate as unknown as (routeName: string, params?: unknown) => void)('Home', {
+          screen: 'CoinManagement',
+        });
+        return true;
+      }
+      return false;
+    };
+
+    if (tryNavigate(navigation)) return true;
+    const parent = navigation.getParent?.();
+    if (tryNavigate(parent as NavigationLike | null | undefined)) return true;
+    const grandParent = typeof parent?.getParent === 'function' ? parent.getParent() : undefined;
+    if (tryNavigate(grandParent as NavigationLike | null | undefined)) return true;
+    return false;
+  }, [navigation]);
 
   if (!tutor) {
     return (
@@ -272,7 +336,10 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
           {
             text: 'コイン購入',
             onPress: () => {
-              /* TODO: コイン購入画面へ */
+              const navigated = openCoinManagement();
+              if (!navigated) {
+                Alert.alert('ご案内', 'ホームタブの「コイン管理」からコインを購入できます。');
+              }
             },
           },
         ],

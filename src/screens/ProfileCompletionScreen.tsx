@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,15 +10,22 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 
 import { StandardScreen } from '../components/templates';
 import { useAuth } from '../contexts/AuthContext';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import { COIN_CONSTANTS } from '@/constants/coinPlans';
+import { getApiClient } from '@/services/api/mock';
+import type { Student, Tutor } from '@/services/api/types';
+
 export default function ProfileCompletionScreen() {
-  const { role, completeProfile } = useAuth();
+  const { user, role, completeProfile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const api = React.useMemo(() => getApiClient(), []);
 
   // フォーム状態
   const [formData, setFormData] = useState({
@@ -39,29 +46,206 @@ export default function ProfileCompletionScreen() {
     learningGoals: '',
   });
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const joinList = (values?: string[]) => (values && values.length ? values.join('、 ') : '');
+
+    const loadProfile = async () => {
+      if (!user?.id || !role) {
+        if (isMounted) {
+          setIsLoadingProfile(false);
+        }
+        return;
+      }
+
+      setIsLoadingProfile(true);
+
+      try {
+        if (role === 'student') {
+          const response = await api.student.getProfile(user.id);
+          if (!isMounted) return;
+          if (response.success && response.data) {
+            const studentProfile = response.data as Student;
+            const subjects = studentProfile.subjects_interested?.length
+              ? studentProfile.subjects_interested
+              : (studentProfile.interested_subjects ?? []);
+
+            setFormData((prev) => ({
+              ...prev,
+              age: studentProfile.age ? String(studentProfile.age) : prev.age,
+              grade: studentProfile.grade ?? prev.grade,
+              school: studentProfile.school ?? prev.school,
+              bio: studentProfile.bio ?? prev.bio,
+              subjectsInterested: subjects.length ? joinList(subjects) : prev.subjectsInterested,
+              learningGoals: studentProfile.learning_goals ?? prev.learningGoals,
+            }));
+          } else if (response.error) {
+            Alert.alert('エラー', response.error);
+          }
+        } else {
+          const response = await api.tutor.getProfile(user.id);
+          if (!isMounted) return;
+          if (response.success && response.data) {
+            const tutorProfile = response.data as Tutor;
+            setFormData((prev) => ({
+              ...prev,
+              grade: tutorProfile.grade ?? prev.grade,
+              school: tutorProfile.school ?? prev.school,
+              bio: tutorProfile.bio ?? prev.bio,
+              hourlyRate: tutorProfile.hourly_rate
+                ? String(tutorProfile.hourly_rate)
+                : prev.hourlyRate,
+              subjectsTaught: tutorProfile.subjects_taught?.length
+                ? joinList(tutorProfile.subjects_taught)
+                : prev.subjectsTaught,
+              experienceYears:
+                typeof tutorProfile.experience_years === 'number'
+                  ? String(tutorProfile.experience_years)
+                  : prev.experienceYears,
+              qualifications: tutorProfile.qualifications?.length
+                ? joinList(tutorProfile.qualifications)
+                : prev.qualifications,
+            }));
+          } else if (response.error) {
+            Alert.alert('エラー', response.error);
+          }
+        }
+      } catch (error) {
+        console.error('プロフィール読み込みエラー:', error);
+        Alert.alert('エラー', 'プロフィール情報の取得に失敗しました。');
+      } finally {
+        if (isMounted) {
+          setIsLoadingProfile(false);
+        }
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [api, role, user?.id]);
+
   const handleSubmit = async () => {
-    // 基本的なバリデーション
+    if (!user?.id || !role) {
+      Alert.alert('エラー', 'ユーザー情報が取得できません。再度ログインしてください。');
+      return;
+    }
+
     if (!formData.age || !formData.grade) {
       Alert.alert('入力エラー', '年齢と学年は必須項目です。');
       return;
     }
 
-    if (role === 'tutor' && (!formData.hourlyRate || !formData.subjectsTaught)) {
-      Alert.alert('入力エラー', '先輩として登録する場合、時給と教える科目は必須です。');
+    const ageValue = Number(formData.age);
+    if (Number.isNaN(ageValue) || ageValue <= 0) {
+      Alert.alert('入力エラー', '年齢は正の数字で入力してください。');
       return;
     }
 
-    if (role === 'student' && !formData.subjectsInterested) {
-      Alert.alert('入力エラー', '興味のある科目を入力してください。');
-      return;
+    const trimmedGrade = formData.grade.trim();
+    const trimmedSchool = formData.school.trim();
+    const trimmedBio = formData.bio.trim();
+    const trimmedLearningGoals = formData.learningGoals.trim();
+
+    const parseList = (value: string) =>
+      value
+        .split(/[,、，\s]+/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+
+    let studentSubjects: string[] = [];
+    let tutorSubjects: string[] = [];
+    let hourlyRateValue = 0;
+    let experienceValue: number | undefined;
+    let qualificationList: string[] = [];
+
+    if (role === 'student') {
+      studentSubjects = parseList(formData.subjectsInterested);
+      if (studentSubjects.length === 0) {
+        Alert.alert('入力エラー', '興味のある科目を入力してください。');
+        return;
+      }
+    } else {
+      if (!formData.hourlyRate || !formData.subjectsTaught) {
+        Alert.alert('入力エラー', '先輩として登録する場合、時給と教える科目は必須です。');
+        return;
+      }
+
+      const hourlyRateNum = Number(formData.hourlyRate);
+      if (Number.isNaN(hourlyRateNum)) {
+        Alert.alert('入力エラー', '時給は数字で入力してください。');
+        return;
+      }
+
+      if (hourlyRateNum < COIN_CONSTANTS.MIN_HOURLY_RATE) {
+        Alert.alert(
+          '入力エラー',
+          `時給は最低 ${COIN_CONSTANTS.MIN_HOURLY_RATE} コイン以上で設定してください。`,
+        );
+        return;
+      }
+      hourlyRateValue = hourlyRateNum;
+
+      tutorSubjects = parseList(formData.subjectsTaught);
+      if (tutorSubjects.length === 0) {
+        Alert.alert('入力エラー', '教える科目を入力してください。');
+        return;
+      }
+
+      if (formData.experienceYears) {
+        const parsedExperience = Number(formData.experienceYears);
+        if (Number.isNaN(parsedExperience) || parsedExperience < 0) {
+          Alert.alert('入力エラー', '指導経験年数は0以上の数字で入力してください。');
+          return;
+        }
+        experienceValue = parsedExperience;
+      }
+
+      qualificationList = formData.qualifications ? parseList(formData.qualifications) : [];
     }
 
     setIsSubmitting(true);
 
     try {
-      // TODO: APIでプロフィール更新
-      // 実際の実装では、ここでAPIクライアントを使用してプロフィールを更新
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // モック遅延
+      if (role === 'student') {
+        const payload: Partial<Student> = {
+          age: ageValue,
+          grade: trimmedGrade,
+          school: trimmedSchool || undefined,
+          bio: trimmedBio || undefined,
+          subjects_interested: studentSubjects,
+          interested_subjects: studentSubjects,
+          learning_goals: trimmedLearningGoals || undefined,
+        };
+
+        const response = await api.student.updateProfile(user.id, payload);
+        if (!response.success) {
+          Alert.alert('エラー', response.error || 'プロフィールの保存に失敗しました。');
+          return;
+        }
+      } else {
+        const payload: Partial<Tutor> = {
+          grade: trimmedGrade || undefined,
+          school: trimmedSchool || undefined,
+          bio: trimmedBio || undefined,
+          hourly_rate: hourlyRateValue,
+          subjects_taught: tutorSubjects,
+          qualifications: qualificationList,
+        };
+
+        if (typeof experienceValue === 'number') {
+          payload.experience_years = experienceValue;
+        }
+
+        const response = await api.tutor.updateProfile(user.id, payload);
+        if (!response.success) {
+          Alert.alert('エラー', response.error || 'プロフィールの保存に失敗しました。');
+          return;
+        }
+      }
 
       completeProfile();
       Alert.alert(
@@ -70,6 +254,7 @@ export default function ProfileCompletionScreen() {
         [{ text: 'OK' }],
       );
     } catch (error) {
+      console.error('プロフィール更新エラー:', error);
       Alert.alert('エラー', 'プロフィールの保存に失敗しました。');
     } finally {
       setIsSubmitting(false);
@@ -203,6 +388,17 @@ export default function ProfileCompletionScreen() {
     </View>
   );
 
+  if (isLoadingProfile) {
+    return (
+      <StandardScreen title="プロフィール設定" showBackButton={false}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>プロフィールを読み込み中です...</Text>
+        </View>
+      </StandardScreen>
+    );
+  }
+
   return (
     <StandardScreen title="プロフィール設定" showBackButton={false}>
       <KeyboardAvoidingView
@@ -232,9 +428,12 @@ export default function ProfileCompletionScreen() {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.submitButton, isSubmitting && styles.disabledButton]}
+            style={[
+              styles.submitButton,
+              (isSubmitting || isLoadingProfile) && styles.disabledButton,
+            ]}
             onPress={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isLoadingProfile}
           >
             <Text style={styles.submitButtonText}>{isSubmitting ? '保存中...' : '設定完了'}</Text>
           </TouchableOpacity>
@@ -321,5 +520,17 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: typography.sizes?.body || 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: typography.sizes?.body || 16,
+    color: colors.gray600,
+    textAlign: 'center',
   },
 });

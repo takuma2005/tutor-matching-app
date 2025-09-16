@@ -1,5 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NavigationProp, ParamListBase } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import type { ComponentProps } from 'react';
 import React, { useState, useCallback, useMemo } from 'react';
 import {
@@ -17,6 +19,7 @@ import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import Card from '@/components/common/Card';
 import ScreenContainer from '@/components/common/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
+import type { HomeStackParamList } from '@/navigation/HomeStackNavigator';
 import type { Notification, NotificationType } from '@/services/api/mock/notificationService';
 import { MockNotificationService } from '@/services/api/mock/notificationService';
 import { mockRealtimeService } from '@/services/api/mock/realtimeService';
@@ -30,11 +33,12 @@ type LocalNotification = Notification & {
 };
 
 export default function NotificationScreen() {
+  const navigation = useNavigation<StackNavigationProp<HomeStackParamList, 'Notification'>>();
   const [notifications, setNotifications] = useState<LocalNotification[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationService = useMemo(() => new MockNotificationService(), []);
-  const { user: authUser } = useAuth();
+  const { user: authUser, role } = useAuth();
   const userId = authUser?.id;
 
   const loadNotifications = useCallback(async () => {
@@ -168,19 +172,57 @@ export default function NotificationScreen() {
       }
     }
 
-    // 通知タイプに応じて適切な画面に遷移
-    // TODO: ナビゲーション実装
+    const parentNavigation = navigation.getParent<NavigationProp<ParamListBase>>();
+    const navigateToTab = (route: string, params?: object) => {
+      if (parentNavigation) {
+        (parentNavigation as unknown as { navigate: (r: string, p?: object) => void }).navigate(
+          route,
+          params,
+        );
+      }
+    };
+
     switch (notification.type) {
       case 'match_request_received':
+        if (role === 'tutor') {
+          if (notification.related_id) {
+            navigateToTab('Requests', {
+              screen: 'MatchRequestDetail',
+              params: { requestId: notification.related_id },
+            });
+          } else {
+            navigateToTab('Requests', { screen: 'MatchRequestList' });
+          }
+        } else {
+          navigateToTab('MyPage', { screen: 'MatchRequests' });
+        }
+        break;
       case 'match_request_approved':
-        // マッチング申請画面へ遷移
+      case 'match_request_rejected':
+        navigateToTab('MyPage', { screen: 'MatchRequests' });
         break;
       case 'lesson_request_received':
+        if (role === 'tutor') {
+          navigateToTab('Lesson', { screen: 'TutorLessonList' });
+        } else {
+          navigateToTab('Lesson', { screen: 'StudentLessonList' });
+        }
+        break;
       case 'lesson_request_approved':
-        // 授業管理画面へ遷移
+      case 'lesson_request_rejected':
+      case 'lesson_started':
+      case 'lesson_completed':
+        if (role === 'tutor') {
+          navigateToTab('Lesson', { screen: 'TutorLessonList' });
+        } else {
+          navigateToTab('Lesson', { screen: 'StudentLessonList' });
+        }
+        break;
+      case 'payment_received':
+        navigateToTab('Lesson', { screen: 'TutorLessonList' });
         break;
       case 'message_received':
-        // チャット画面へ遷移
+        navigateToTab('Chat', { screen: 'ChatMain' });
         break;
       default:
         break;

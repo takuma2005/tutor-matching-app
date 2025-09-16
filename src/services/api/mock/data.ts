@@ -9,6 +9,8 @@ import {
   MatchRequest,
   Message,
   ChatRoom,
+  ChatModerationReport,
+  ChatBlock,
 } from '../types';
 import type { Notification } from './notificationService';
 
@@ -398,6 +400,9 @@ export const mockMessages: Message[] = [
   // テスト用の初期データは空で開始
 ];
 
+const mockChatModerationReports: ChatModerationReport[] = [];
+const mockChatBlocks: ChatBlock[] = [];
+
 // メインのMockDB
 export const mockDb = {
   students: mockStudents,
@@ -407,6 +412,8 @@ export const mockDb = {
   matchRequests: mockMatchRequests,
   chatRooms: mockChatRooms,
   messages: mockMessages,
+  chatModerationReports: mockChatModerationReports,
+  chatBlocks: mockChatBlocks,
   notifications: [] as Notification[],
 };
 

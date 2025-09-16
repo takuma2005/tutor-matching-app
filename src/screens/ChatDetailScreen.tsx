@@ -73,6 +73,13 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const api = React.useMemo(() => getApiClient(), []);
   const { student: authStudent, user: authUser } = useAuth();
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+  const [blockedByOtherUserId, setBlockedByOtherUserId] = useState<string | null>(null);
+
+  const currentUserId = currentStudent?.id ?? authUser?.id ?? '';
+  const hasBlockedTutor = blockedUserIds.includes(tutorId);
+  const isBlockedByOther = Boolean(blockedByOtherUserId);
+  const isChatBlocked = hasBlockedTutor || isBlockedByOther;
 
   const maxMessageLength = 1000;
   const remainingChars = maxMessageLength - inputText.length;
@@ -83,13 +90,16 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
       const studentId = authStudent?.id ?? authUser?.id;
       if (!studentId) {
         setCurrentStudent(null);
+        setBlockedUserIds([]);
+        setBlockedByOtherUserId(null);
         return;
       }
 
-      const [profileResp, tutorsResp, messagesResp] = await Promise.all([
+      const [profileResp, tutorsResp, messagesResp, moderationResp] = await Promise.all([
         api.student.getProfile(studentId),
         api.student.searchTutors(undefined, 1, 200),
         api.chat.getMessages(chatRoomId, 1, 200),
+        api.chat.getModerationStatus(chatRoomId, studentId),
       ]);
       if (!mounted) return;
       if (profileResp?.success) setCurrentStudent(profileResp.data);
@@ -123,6 +133,14 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
           }
         }
       }
+
+      if (moderationResp?.success && moderationResp.data) {
+        setBlockedUserIds(moderationResp.data.blockedUsers);
+        setBlockedByOtherUserId(moderationResp.data.blockedByOtherUserId);
+      } else {
+        setBlockedUserIds([]);
+        setBlockedByOtherUserId(null);
+      }
     })();
     return () => {
       mounted = false;
@@ -151,14 +169,14 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
   }, [isTyping, typingAnimValue]);
 
   const handleSendMessage = useCallback(async () => {
-    if (inputText.trim() === '' || isLoading || !currentStudent) return;
+    if (inputText.trim() === '' || isLoading || !currentUserId || isChatBlocked) return;
     const messageText = inputText.trim();
 
     const tempId = `temp_${Date.now()}`;
     const optimistic: ApiMessage = {
       id: tempId,
       chatRoomId,
-      senderId: currentStudent.id,
+      senderId: currentUserId,
       text: messageText,
       timestamp: new Date(),
       status: 'sending',
@@ -172,19 +190,26 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
     }, 100);
 
     try {
-      const sendResp = await api.chat.sendMessage(chatRoomId, currentStudent.id, messageText);
-      if (sendResp.success) {
-        const sentMsg = sendResp.data;
-        setMessages((prev) => prev.map((m) => (m.id === tempId ? sentMsg : m)));
+      const sendResp = await api.chat.sendMessage(chatRoomId, currentUserId, messageText);
+      if (!sendResp.success) {
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        Alert.alert('送信エラー', sendResp.error || 'メッセージを送信できませんでした。');
+        return;
       }
 
+      const sentMsg = sendResp.data;
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? sentMsg : m)));
+
+      const senderId = currentUserId;
+
       setTimeout(async () => {
-        const last = sendResp.success ? sendResp.data : null;
-        if (last) {
-          await api.chat.updateMessageStatus(last.id, 'delivered', currentStudent?.id);
+        try {
+          await api.chat.updateMessageStatus(sentMsg.id, 'delivered', senderId);
           setMessages((prev) =>
-            prev.map((m) => (m.id === last.id ? { ...m, status: 'delivered' } : m)),
+            prev.map((m) => (m.id === sentMsg.id ? { ...m, status: 'delivered' } : m)),
           );
+        } catch (error) {
+          console.warn('Failed to update message status:', error);
         }
         if (Math.random() < 0.3 && messageText.includes('？')) {
           setIsTyping(true);
@@ -209,13 +234,18 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
     } finally {
       setIsLoading(false);
     }
-  }, [api, chatRoomId, currentStudent, inputText, isLoading, tutorId]);
+  }, [api, chatRoomId, currentUserId, inputText, isChatBlocked, isLoading, tutorId]);
 
   const handleLessonRequest = () => {
     navigation.navigate('LessonRequest', { tutorId, chatRoomId });
   };
 
   const handleReport = () => {
+    if (!authUser?.id) {
+      Alert.alert('エラー', 'ユーザー情報が取得できません。');
+      return;
+    }
+
     Alert.alert(
       '通報する',
       `${tutor?.name || 'このユーザー'}さんを通報しますか？\n\n不適切な行為や内容がある場合にご利用ください。`,
@@ -224,12 +254,27 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
         {
           text: '通報する',
           style: 'destructive',
-          onPress: () => {
-            // TODO: 通報機能のAPI実装
-            Alert.alert(
-              '通報完了',
-              '通報しました。運営チームが確認し、必要に応じて対応いたします。',
-            );
+          onPress: async () => {
+            try {
+              const response = await api.chat.reportUser(
+                chatRoomId,
+                authUser.id,
+                tutorId,
+                'モック環境での通報',
+              );
+
+              if (response.success) {
+                Alert.alert(
+                  '通報完了',
+                  '通報しました。運営チームが確認し、必要に応じて対応いたします。',
+                );
+              } else {
+                Alert.alert('エラー', response.error || '通報に失敗しました。');
+              }
+            } catch (error) {
+              console.error('通報エラー:', error);
+              Alert.alert('エラー', '通報の送信に失敗しました。');
+            }
           },
         },
       ],
@@ -237,6 +282,16 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
   };
 
   const handleBlock = () => {
+    if (!authUser?.id) {
+      Alert.alert('エラー', 'ユーザー情報が取得できません。');
+      return;
+    }
+
+    if (hasBlockedTutor) {
+      Alert.alert('情報', 'このユーザーは既にブロック済みです。');
+      return;
+    }
+
     Alert.alert(
       'ブロックする',
       `${tutor?.name || 'このユーザー'}さんをブロックしますか？\n\nブロックすると以下の制限がかかります：\n・ メッセージの送受信ができなくなる\n・ 新たなマッチングができなくなる`,
@@ -245,11 +300,22 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
         {
           text: 'ブロックする',
           style: 'destructive',
-          onPress: () => {
-            // TODO: ブロック機能のAPI実装
-            Alert.alert('ブロック完了', 'ユーザーをブロックしました。', [
-              { text: 'OK', onPress: () => navigation.goBack() },
-            ]);
+          onPress: async () => {
+            try {
+              const response = await api.chat.blockUser(chatRoomId, authUser.id, tutorId);
+              if (response.success) {
+                setBlockedUserIds((prev) => (prev.includes(tutorId) ? prev : [...prev, tutorId]));
+                setIsTyping(false);
+                Alert.alert('ブロック完了', 'ユーザーをブロックしました。', [
+                  { text: 'OK', onPress: () => navigation.goBack() },
+                ]);
+              } else {
+                Alert.alert('エラー', response.error || 'ブロックに失敗しました。');
+              }
+            } catch (error) {
+              console.error('ブロックエラー:', error);
+              Alert.alert('エラー', 'ブロックに失敗しました。');
+            }
           },
         },
       ],
@@ -308,7 +374,7 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
   const relationLabel = getRelationLabel(tutor, currentStudent);
 
   const renderMessage = ({ item, index }: { item: ApiMessage; index: number }) => {
-    const isOwnMessage = item.senderId === (currentStudent?.id ?? '');
+    const isOwnMessage = item.senderId === currentUserId;
     const showTimestamp =
       index === 0 ||
       messages[index - 1]?.senderId !== item.senderId ||
@@ -465,9 +531,10 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
         >
           <View style={styles.inlineCtaContainer}>
             <TouchableOpacity
-              style={styles.inlineCtaButton}
+              style={[styles.inlineCtaButton, isChatBlocked && styles.inlineCtaButtonDisabled]}
               onPress={handleLessonRequest}
               activeOpacity={0.85}
+              disabled={isChatBlocked}
             >
               <MaterialIcons
                 name="add"
@@ -485,18 +552,39 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
               </Text>
             </View>
           )}
+          {isChatBlocked && (
+            <View
+              style={[
+                styles.blockNotice,
+                isBlockedByOther ? styles.blockNoticeDanger : styles.blockNoticeInfo,
+              ]}
+            >
+              <MaterialIcons
+                name={isBlockedByOther ? 'block' : 'privacy-tip'}
+                size={16}
+                color={isBlockedByOther ? colors.error : colors.gray600}
+              />
+              <Text style={styles.blockNoticeText}>
+                {isBlockedByOther
+                  ? '相手によってブロックされているためメッセージを送信できません。'
+                  : 'このユーザーをブロックしているためメッセージを送信できません。'}
+              </Text>
+            </View>
+          )}
           <View style={styles.inputRow}>
             <View style={styles.inputWrapper}>
               <TextInput
                 ref={inputRef}
                 style={[styles.textInput, inputText.length > 200 && styles.textInputExpanded]}
-                placeholder="メッセージを入力..."
+                placeholder={
+                  isChatBlocked ? 'ブロック中はメッセージを送信できません' : 'メッセージを入力...'
+                }
                 placeholderTextColor={colors.gray400}
                 value={inputText}
                 onChangeText={setInputText}
                 multiline
                 maxLength={maxMessageLength}
-                editable={!isLoading}
+                editable={!isLoading && !isChatBlocked}
                 textAlignVertical="top"
                 returnKeyType="send"
                 onSubmitEditing={handleSendMessage}
@@ -506,10 +594,11 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
             <TouchableOpacity
               style={[
                 styles.sendButton,
-                (inputText.trim() === '' || isLoading) && styles.sendButtonDisabled,
+                (inputText.trim() === '' || isLoading || isChatBlocked) &&
+                  styles.sendButtonDisabled,
               ]}
               onPress={handleSendMessage}
-              disabled={inputText.trim() === '' || isLoading}
+              disabled={inputText.trim() === '' || isLoading || isChatBlocked}
               activeOpacity={0.7}
               accessibilityLabel="メッセージを送信"
             >
@@ -845,6 +934,12 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+  inlineCtaButtonDisabled: {
+    backgroundColor: colors.gray300,
+    opacity: 0.7,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   inlineCtaIcon: {
     marginRight: spacing.xs,
   },
@@ -864,6 +959,32 @@ const styles = StyleSheet.create({
   charCountError: {
     color: colors.error,
     fontWeight: typography.fontWeights.semibold,
+  },
+  blockNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.md,
+  },
+  blockNoticeInfo: {
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+  },
+  blockNoticeDanger: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  blockNoticeText: {
+    marginLeft: spacing.sm,
+    color: colors.gray700,
+    fontSize: typography.fontSizes.sm,
+    flex: 1,
+    lineHeight: 18,
   },
   inputRow: {
     flexDirection: 'row',
