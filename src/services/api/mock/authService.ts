@@ -1,7 +1,7 @@
 // 認証サービスのモック実装
 
-import { AuthService, User, ApiResponse } from '../types';
-import { mockStudents, delay } from './data';
+import { AuthService, User, ApiResponse, Student } from '../types';
+import { mockStudents, mockDb, delay } from './data';
 
 class MockAuthService implements AuthService {
   private currentUser: User | null = null;
@@ -65,6 +65,30 @@ class MockAuthService implements AuthService {
     };
 
     this.users.push(newUser);
+    const studentData = userData as Partial<Student> | undefined;
+    const existingStudent = mockDb.students.find((s) => s.id === newUser.id);
+    if (!existingStudent) {
+      const now = new Date().toISOString();
+      const newStudent: Student = {
+        ...newUser,
+        role: 'student',
+        age: studentData?.age ?? 18,
+        grade: studentData?.grade ?? '',
+        subjects_interested: studentData?.subjects_interested ?? [],
+        interested_subjects:
+          studentData?.interested_subjects ?? studentData?.subjects_interested ?? [],
+        learning_goals: studentData?.learning_goals,
+        preferred_schedule: studentData?.preferred_schedule,
+        coins: studentData?.coins ?? 0,
+        school: studentData?.school,
+        phone: studentData?.phone,
+        bio: studentData?.bio,
+        avatar: studentData?.avatar ?? studentData?.avatar_url,
+        created_at: newUser.created_at || now,
+        updated_at: newUser.updated_at || now,
+      };
+      mockDb.students.push(newStudent);
+    }
     this.currentUser = newUser;
 
     return {

@@ -22,6 +22,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { ChatStackParamList } from '../navigation/ChatStackNavigator';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
+import { useAuth } from '@/contexts/AuthContext';
 import { getApiClient } from '@/services/api/mock';
 import type { Tutor, Student, Message as ApiMessage, MessageStatus } from '@/services/api/types';
 // API の Message 型を利用するためローカル定義は削除
@@ -71,6 +72,7 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const api = React.useMemo(() => getApiClient(), []);
+  const { student: authStudent, user: authUser } = useAuth();
 
   const maxMessageLength = 1000;
   const remainingChars = maxMessageLength - inputText.length;
@@ -78,13 +80,20 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
   useEffect(() => {
     let mounted = true;
     (async () => {
+      const studentId = authStudent?.id ?? authUser?.id;
+      if (!studentId) {
+        setCurrentStudent(null);
+        return;
+      }
+
       const [profileResp, tutorsResp, messagesResp] = await Promise.all([
-        api.student.getProfile('student-1'),
+        api.student.getProfile(studentId),
         api.student.searchTutors(undefined, 1, 200),
         api.chat.getMessages(chatRoomId, 1, 200),
       ]);
       if (!mounted) return;
       if (profileResp?.success) setCurrentStudent(profileResp.data);
+      else if (authStudent) setCurrentStudent(authStudent);
       if (tutorsResp?.success) {
         const found = tutorsResp.data.find((t) => t.id === tutorId);
         setTutor(found);
@@ -93,13 +102,14 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
         setMessages(messagesResp.data);
 
         // 未読メッセージを既読に更新
+        const currentId = profileResp?.data?.id ?? authStudent?.id ?? null;
         const unreadMessages = messagesResp.data.filter(
-          (msg) => msg.senderId !== profileResp.data?.id && msg.status !== 'read',
+          (msg) => msg.senderId !== currentId && msg.status !== 'read',
         );
 
         for (const message of unreadMessages) {
           try {
-            await api.chat.updateMessageStatus(message.id, 'read');
+            await api.chat.updateMessageStatus(message.id, 'read', currentId ?? undefined);
           } catch (error) {
             console.warn('Failed to update message status:', error);
           }
@@ -117,7 +127,7 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
     return () => {
       mounted = false;
     };
-  }, [api, chatRoomId, tutorId]);
+  }, [api, authStudent, authUser?.id, chatRoomId, tutorId]);
 
   useEffect(() => {
     // 画面に入ったら最新メッセージまでスクロール
@@ -171,7 +181,7 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
       setTimeout(async () => {
         const last = sendResp.success ? sendResp.data : null;
         if (last) {
-          await api.chat.updateMessageStatus(last.id, 'delivered');
+          await api.chat.updateMessageStatus(last.id, 'delivered', currentStudent?.id);
           setMessages((prev) =>
             prev.map((m) => (m.id === last.id ? { ...m, status: 'delivered' } : m)),
           );

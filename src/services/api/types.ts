@@ -155,11 +155,12 @@ export interface StudentService {
 
   // マッチング関連
   sendMatchRequest(
+    studentId: string,
     tutorId: string,
     message: string,
     scheduleNote?: string,
   ): Promise<ApiResponse<MatchRequest>>;
-  getMatchRequests(status?: MatchStatus): Promise<ApiResponse<MatchRequest[]>>;
+  getMatchRequests(studentId: string, status?: MatchStatus): Promise<ApiResponse<MatchRequest[]>>;
   cancelMatchRequest(matchId: string): Promise<ApiResponse<MatchRequest>>;
 
   bookLesson(
@@ -167,6 +168,7 @@ export interface StudentService {
     lessonData: Omit<Lesson, 'id' | 'status' | 'created_at' | 'updated_at'>,
   ): Promise<ApiResponse<Lesson>>;
   getLessons(
+    studentId: string,
     filters?: LessonSearchFilters,
     page?: number,
     limit?: number,
@@ -238,7 +240,11 @@ export interface ChatService {
     limit?: number,
   ): Promise<PaginatedResponse<Message>>;
   sendMessage(chatRoomId: string, senderId: string, text: string): Promise<ApiResponse<Message>>;
-  updateMessageStatus(messageId: string, status: MessageStatus): Promise<ApiResponse<Message>>;
+  updateMessageStatus(
+    messageId: string,
+    status: MessageStatus,
+    userId?: string,
+  ): Promise<ApiResponse<Message>>;
   createChatRoom(tutorId: string, studentId: string): Promise<ApiResponse<ChatRoom>>;
 }
 
