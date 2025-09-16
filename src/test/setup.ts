@@ -1,5 +1,9 @@
 // Import jest matchers
 
+// Jest 実行時は常にモック API/DB を利用する
+process.env.EXPO_PUBLIC_API_MODE = 'mock';
+process.env.EXPO_PUBLIC_USE_MOCK = 'true';
+
 // Mock React Native modules
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
