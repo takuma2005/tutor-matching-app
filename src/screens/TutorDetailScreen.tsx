@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { NavigationProp, ParamListBase, useFocusEffect } from '@react-navigation/native';
 import type { StackScreenProps } from '@react-navigation/stack';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -32,7 +33,8 @@ import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import ScreenContainer from '@/components/common/ScreenContainer';
 import Section from '@/components/common/Section';
 import { useAuth } from '@/contexts/AuthContext';
-import { getApiClient } from '@/services/api/mock';
+import { CoinManager } from '@/domain/coin/coinManager';
+import { getApiClient, mockApiClient } from '@/services/api/mock';
 import type { Tutor, Student } from '@/services/api/types';
 
 type HomeTutorDetailProps = StackScreenProps<HomeStackParamList, 'TutorDetail'>;
@@ -40,6 +42,12 @@ type SearchTutorDetailProps = StackScreenProps<SearchStackParamList, 'TutorDetai
 type Props = HomeTutorDetailProps | SearchTutorDetailProps;
 
 const MATCHING_COST = 300; // マッチングに必要なコイン数
+
+type NavigationLike = {
+  navigate?: NavigationProp<ParamListBase>['navigate'];
+  getParent?: () => NavigationLike | undefined | null;
+  getState?: () => { routeNames?: string[] } | undefined;
+};
 
 export default function TutorDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
@@ -49,6 +57,7 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { student: authStudent, user: authUser } = useAuth();
+  const api = React.useMemo(() => getApiClient() as typeof mockApiClient, []);
 
   // マッチング申請モーダルの状態
   const [showMatchModal, setShowMatchModal] = useState(false);
@@ -82,15 +91,32 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
     };
   });
 
+  const loadStudentProfile = useCallback(async () => {
+    const id = authStudent?.id ?? authUser?.id;
+    if (!id) {
+      setCurrentStudent(null);
+      return;
+    }
+    try {
+      const profile = await api.student.getProfile(id);
+      if (profile.success) {
+        setCurrentStudent(profile.data);
+      } else if (authStudent) {
+        setCurrentStudent(authStudent);
+      }
+    } catch (error) {
+      console.error('Failed to load student profile:', error);
+    }
+  }, [api, authStudent, authUser?.id]);
+
   // データ取得
   React.useEffect(() => {
-    const api = getApiClient();
     let mounted = true;
-    const studentId = authStudent?.id ?? authUser?.id;
+    const id = authStudent?.id ?? authUser?.id;
     Promise.all([
       api.student.searchTutors(undefined, 1, 200),
-      studentId
-        ? api.student.getProfile(studentId)
+      id
+        ? api.student.getProfile(id)
         : Promise.resolve({ success: false as const, data: undefined as unknown as Student }),
     ])
       .then(([tutorsResp, studentResp]) => {
@@ -109,13 +135,52 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
     return () => {
       mounted = false;
     };
-  }, [authStudent, authUser?.id, tutorId]);
+  }, [api, authStudent, authUser?.id, tutorId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const id = authStudent?.id ?? authUser?.id;
+      if (id) {
+        CoinManager.syncBalance(id).catch(() => {});
+      }
+      loadStudentProfile().catch(() => {});
+    }, [authStudent?.id, authUser?.id, loadStudentProfile]),
+  );
 
   // Bottom sheet state
   const [isSheetOpen, setSheetOpen] = useState(false);
   const toggleSheet = () => setSheetOpen((prev) => !prev);
 
   // 現在のユーザー（student）の情報を取得はサービスから取得済み
+
+  const openCoinManagement = useCallback((): boolean => {
+    const tryNavigate = (nav: NavigationLike | null | undefined) => {
+      if (!nav || typeof nav.navigate !== 'function') {
+        return false;
+      }
+      const state = typeof nav.getState === 'function' ? nav.getState() : undefined;
+      if (state?.routeNames?.includes('CoinManagement')) {
+        (nav.navigate as unknown as (routeName: string, params?: unknown) => void)(
+          'CoinManagement',
+        );
+        return true;
+      }
+      if (state?.routeNames?.includes('Home')) {
+        (nav.navigate as unknown as (routeName: string, params?: unknown) => void)('Home', {
+          screen: 'CoinManagement',
+        });
+        return true;
+      }
+      return false;
+    };
+
+    if (tryNavigate(navigation)) return true;
+    const parent = navigation.getParent?.();
+    if (tryNavigate(parent as NavigationLike | null | undefined)) return true;
+    const grandParent = typeof parent?.getParent === 'function' ? parent.getParent() : undefined;
+    if (tryNavigate(grandParent as NavigationLike | null | undefined)) return true;
+    return false;
+  }, [navigation]);
 
   if (!tutor) {
     return (
@@ -143,9 +208,10 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
           {
             text: 'コイン購入',
             onPress: () => {
-              // TODO: CoinManagementScreen への遷移を実装
-              // navigation.navigate('CoinManagement');
-              Alert.alert('コイン購入', 'コイン購入画面への遷移は後日実装予定です');
+              const navigated = openCoinManagement();
+              if (!navigated) {
+                Alert.alert('ご案内', 'ホームタブの「コイン管理」からコインを購入できます。');
+              }
             },
           },
         ],
@@ -199,6 +265,7 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
                 const updatedStudent = await api.student.getProfile(currentStudent.id);
                 if (updatedStudent.success) {
                   setCurrentStudent(updatedStudent.data);
+                  await CoinManager.syncBalance(updatedStudent.data.id);
                 }
 
                 Alert.alert(

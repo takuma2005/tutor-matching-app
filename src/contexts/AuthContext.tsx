@@ -294,7 +294,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const completeProfile = React.useCallback(() => {
     setNeedsProfileCompletion(false);
-  }, []);
+    refreshUser().catch((error) => {
+      console.error('プロフィール再取得エラー:', error);
+    });
+  }, [refreshUser]);
 
   const value: AuthContextType = React.useMemo(
     () => ({

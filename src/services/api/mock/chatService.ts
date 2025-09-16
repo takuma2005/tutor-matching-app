@@ -1,7 +1,14 @@
-import { mockDb, delay } from './data';
+import { mockDb, delay, generateId, getCurrentTimestamp } from './data';
 import { mockNotificationService } from './notificationService';
 
-import type { ChatService, ChatRoom, Message, MessageStatus } from '@/services/api/types';
+import type {
+  ChatService,
+  ChatRoom,
+  Message,
+  MessageStatus,
+  ChatModerationReport,
+  ChatBlock,
+} from '@/services/api/types';
 import { MockChatRepository } from '@/services/mock/MockChatRepository';
 
 const repo = new MockChatRepository();
@@ -47,6 +54,26 @@ export const mockChatService: ChatService = {
   },
 
   async sendMessage(chatRoomId: string, senderId: string, text: string) {
+    const activeBlock = mockDb.chatBlocks.find(
+      (block: ChatBlock) =>
+        block.chatRoomId === chatRoomId &&
+        block.is_active &&
+        (block.blockerId === senderId || block.blockedUserId === senderId),
+    );
+
+    if (activeBlock) {
+      const blockedByOther = activeBlock.blockedUserId === senderId ? activeBlock.blockerId : null;
+      const errorMessage = blockedByOther
+        ? '相手によってブロックされているためメッセージを送信できません。'
+        : 'このユーザーをブロックしているためメッセージを送信できません。';
+
+      return {
+        success: false as const,
+        error: errorMessage,
+        data: null as unknown as Message,
+      };
+    }
+
     const newMsg = await repo.sendMessage(chatRoomId, senderId, text.trim());
 
     // 通知: 受信者に新着メッセージを通知
@@ -125,5 +152,79 @@ export const mockChatService: ChatService = {
     };
     mockDb.chatRooms.push(room);
     return { success: true, data: room } as const;
+  },
+
+  async reportUser(
+    chatRoomId: string,
+    reporterId: string,
+    reportedUserId: string,
+    reason?: string,
+  ) {
+    await delay(200);
+
+    const report: ChatModerationReport = {
+      id: `report-${generateId()}`,
+      chatRoomId,
+      reporterId,
+      reportedUserId,
+      reason,
+      created_at: getCurrentTimestamp(),
+    };
+
+    mockDb.chatModerationReports.push(report);
+
+    return { success: true, data: report } as const;
+  },
+
+  async blockUser(chatRoomId: string, blockerId: string, blockedUserId: string) {
+    await delay(200);
+
+    const existing = mockDb.chatBlocks.find(
+      (block: ChatBlock) =>
+        block.chatRoomId === chatRoomId &&
+        block.blockerId === blockerId &&
+        block.blockedUserId === blockedUserId &&
+        block.is_active,
+    );
+
+    if (existing) {
+      return { success: true, data: existing } as const;
+    }
+
+    const block: ChatBlock = {
+      id: `block-${generateId()}`,
+      chatRoomId,
+      blockerId,
+      blockedUserId,
+      created_at: getCurrentTimestamp(),
+      is_active: true,
+    };
+
+    mockDb.chatBlocks.push(block);
+
+    return { success: true, data: block } as const;
+  },
+
+  async getModerationStatus(chatRoomId: string, userId: string) {
+    await delay(150);
+
+    const activeBlocks = mockDb.chatBlocks.filter(
+      (block: ChatBlock) => block.chatRoomId === chatRoomId && block.is_active,
+    );
+
+    const blockedUsers = activeBlocks
+      .filter((block) => block.blockerId === userId)
+      .map((block) => block.blockedUserId);
+
+    const blockedBy =
+      activeBlocks.find((block) => block.blockedUserId === userId)?.blockerId ?? null;
+
+    return {
+      success: true as const,
+      data: {
+        blockedUsers,
+        blockedByOtherUserId: blockedBy,
+      },
+    };
   },
 };

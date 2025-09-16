@@ -100,6 +100,24 @@ const prodApiClient = {
     }),
     rateLesson: async (_lessonId: string, _rating: number) => notImplemented('student.rateLesson'),
   },
+  tutor: {
+    getProfile: async (_userId: string) => notImplemented('tutor.getProfile'),
+    updateProfile: async (_userId: string, _updates: unknown) =>
+      notImplemented('tutor.updateProfile'),
+    getMatchRequests: async (_status?: unknown) => ({ success: true, data: [] }),
+    approveMatchRequest: async (_matchId: string) => notImplemented('tutor.approveMatchRequest'),
+    rejectMatchRequest: async (_matchId: string, _reason?: string) =>
+      notImplemented('tutor.rejectMatchRequest'),
+    getLessons: async (_filters?: unknown, _page?: number, _limit?: number) => ({
+      success: true,
+      data: [],
+      pagination: { page: 1, limit: 0, total: 0, has_more: false },
+    }),
+    updateLesson: async (_lessonId: string, _updates: unknown) =>
+      notImplemented('tutor.updateLesson'),
+    updateAvailability: async (_userId: string, _availability: unknown) =>
+      notImplemented('tutor.updateAvailability'),
+  },
   coin: {
     getBalance: async (_userId: string) => ({ success: true, data: { balance: 0 } }),
     purchaseCoins: async (_userId: string, _amount: number, _pmId: string) =>
@@ -123,6 +141,18 @@ const prodApiClient = {
       notImplemented('chat.updateMessageStatus'),
     createChatRoom: async (_tutorId: string, _studentId: string) =>
       notImplemented('chat.createChatRoom'),
+    reportUser: async (
+      _chatRoomId: string,
+      _reporterId: string,
+      _reportedUserId: string,
+      _reason?: string,
+    ) => notImplemented('chat.reportUser'),
+    blockUser: async (_chatRoomId: string, _blockerId: string, _blockedUserId: string) =>
+      notImplemented('chat.blockUser'),
+    getModerationStatus: async (_chatRoomId: string, _userId: string) => ({
+      success: true,
+      data: { blockedUsers: [], blockedByOtherUserId: null },
+    }),
   },
 };
 

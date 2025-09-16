@@ -220,6 +220,24 @@ export interface Message {
   status: MessageStatus;
 }
 
+export interface ChatModerationReport {
+  id: string;
+  chatRoomId: string;
+  reporterId: string;
+  reportedUserId: string;
+  reason?: string;
+  created_at: string;
+}
+
+export interface ChatBlock {
+  id: string;
+  chatRoomId: string;
+  blockerId: string;
+  blockedUserId: string;
+  created_at: string;
+  is_active: boolean;
+}
+
 export interface ChatRoom {
   id: string;
   tutorId: string;
@@ -246,6 +264,21 @@ export interface ChatService {
     userId?: string,
   ): Promise<ApiResponse<Message>>;
   createChatRoom(tutorId: string, studentId: string): Promise<ApiResponse<ChatRoom>>;
+  reportUser(
+    chatRoomId: string,
+    reporterId: string,
+    reportedUserId: string,
+    reason?: string,
+  ): Promise<ApiResponse<ChatModerationReport>>;
+  blockUser(
+    chatRoomId: string,
+    blockerId: string,
+    blockedUserId: string,
+  ): Promise<ApiResponse<ChatBlock>>;
+  getModerationStatus(
+    chatRoomId: string,
+    userId: string,
+  ): Promise<ApiResponse<{ blockedUsers: string[]; blockedByOtherUserId: string | null }>>;
 }
 
 // リアルタイム通知型
