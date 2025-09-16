@@ -92,6 +92,7 @@ export default function NotificationScreen() {
       case 'match_request_received':
       case 'match_request_approved':
       case 'match_request_rejected':
+      case 'match_request_cancelled':
         return 'person-add';
       case 'lesson_request_received':
       case 'lesson_request_approved':
@@ -117,6 +118,8 @@ export default function NotificationScreen() {
         return colors.success;
       case 'match_request_rejected':
         return colors.error;
+      case 'match_request_cancelled':
+        return colors.info;
       case 'lesson_request_received':
         return colors.warning;
       case 'lesson_request_approved':
@@ -199,6 +202,7 @@ export default function NotificationScreen() {
         break;
       case 'match_request_approved':
       case 'match_request_rejected':
+      case 'match_request_cancelled':
         navigateToTab('MyPage', { screen: 'MatchRequests' });
         break;
       case 'lesson_request_received':

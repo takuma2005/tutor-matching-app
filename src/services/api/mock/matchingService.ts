@@ -293,6 +293,25 @@ export class MockMatchingService {
         mockDb.coinTransactions.push(refundTransaction);
       }
 
+      const tutor = mockDb.tutors.find((t) => t.id === matchRequest.tutor_id);
+
+      await Promise.all([
+        mockNotificationService.createMatchRejectionNotificationForStudent(
+          matchRequest.student_id,
+          tutor?.name ?? '担当の先輩',
+          matchId,
+        ),
+        ...(tutor
+          ? [
+              mockNotificationService.createMatchRejectionNotificationForTutor(
+                tutor.id,
+                student?.name ?? '後輩',
+                matchId,
+              ),
+            ]
+          : []),
+      ]);
+
       return {
         success: true,
         data: matchRequest,
@@ -349,6 +368,25 @@ export class MockMatchingService {
         };
         mockDb.coinTransactions.push(refundTransaction);
       }
+
+      const tutor = mockDb.tutors.find((t) => t.id === matchRequest.tutor_id);
+
+      await Promise.all([
+        mockNotificationService.createMatchCancellationNotificationForStudent(
+          matchRequest.student_id,
+          tutor?.name ?? '担当の先輩',
+          matchId,
+        ),
+        ...(tutor
+          ? [
+              mockNotificationService.createMatchCancellationNotificationForTutor(
+                tutor.id,
+                student?.name ?? '後輩',
+                matchId,
+              ),
+            ]
+          : []),
+      ]);
 
       return {
         success: true,
