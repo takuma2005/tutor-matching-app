@@ -54,84 +54,87 @@ export default function MyPageScreen({ navigation }: { navigation: MyPageNav }) 
 
   return (
     <StandardScreen title="マイページ" showBackButton={false}>
-      {/* プロフィールカード */}
-      <View style={styles.profileCard} testID="profile-card">
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            {user?.avatar ? (
-              <Image
-                source={{ uri: user.avatar as string }}
-                style={styles.avatarImage}
-                testID="profile-avatar"
-              />
-            ) : (
-              <View style={styles.avatar} testID="profile-avatar">
-                <MaterialIcons name="person" size={30} color={colors.gray400} />
-              </View>
-            )}
-          </View>
-
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user?.name || '名前未設定'}</Text>
-            <Text style={styles.profileSchool}>
-              {user?.school || '学校未設定'} {user?.grade || '学年未設定'}
-            </Text>
-            <View style={styles.coinBalance}>
-              <MaterialIcons name="monetization-on" size={16} color={colors.warning} />
-              <Text style={styles.coinText}>{(user?.coins ?? 0).toLocaleString()}コイン</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() => navigation.navigate('Profile')}
-          >
-            <MaterialIcons name="arrow-forward-ios" size={16} color={colors.gray400} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* 役割切り替えセクション */}
-      <View style={styles.roleSwitchCard}>
-        <View style={styles.roleHeader}>
-          <MaterialIcons name="swap-horiz" size={24} color={colors.primary} />
-          <View style={styles.roleInfo}>
-            <Text style={styles.roleTitle}>現在の役割</Text>
-            <Text style={styles.currentRole}>
-              {role === 'student' ? '後輩として利用中' : '先輩として登録中'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.roleSwitchButtons}>
-          {role !== 'tutor' && (
-            <TouchableOpacity style={styles.switchButton} onPress={() => handleRoleSwitch('tutor')}>
-              <MaterialIcons name="school" size={20} color={colors.secondary} />
-              <Text style={[styles.switchButtonText, { color: colors.secondary }]}>
-                先輩として登録
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {role !== 'student' && (
-            <TouchableOpacity
-              style={styles.switchButton}
-              onPress={() => handleRoleSwitch('student')}
-            >
-              <MaterialIcons name="person" size={20} color={colors.primary} />
-              <Text style={[styles.switchButtonText, { color: colors.primary }]}>
-                後輩として利用
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* プロフィールカード */}
+        <View style={styles.profileCard} testID="profile-card">
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarContainer}>
+              {user?.avatar ? (
+                <Image
+                  source={{ uri: user.avatar as string }}
+                  style={styles.avatarImage}
+                  testID="profile-avatar"
+                />
+              ) : (
+                <View style={styles.avatar} testID="profile-avatar">
+                  <MaterialIcons name="person" size={30} color={colors.gray400} />
+                </View>
+              )}
+            </View>
+
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{user?.name || '名前未設定'}</Text>
+              <Text style={styles.profileSchool}>
+                {user?.school || '学校未設定'} {user?.grade || '学年未設定'}
+              </Text>
+              <View style={styles.coinBalance}>
+                <MaterialIcons name="monetization-on" size={16} color={colors.warning} />
+                <Text style={styles.coinText}>{(user?.coins ?? 0).toLocaleString()}コイン</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <MaterialIcons name="arrow-forward-ios" size={16} color={colors.gray400} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 役割切り替えセクション */}
+        <View style={styles.roleSwitchCard}>
+          <View style={styles.roleHeader}>
+            <MaterialIcons name="swap-horiz" size={24} color={colors.primary} />
+            <View style={styles.roleInfo}>
+              <Text style={styles.roleTitle}>現在の役割</Text>
+              <Text style={styles.currentRole}>
+                {role === 'student' ? '後輩として利用中' : '先輩として登録中'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.roleSwitchButtons}>
+            {role !== 'tutor' && (
+              <TouchableOpacity
+                style={styles.switchButton}
+                onPress={() => handleRoleSwitch('tutor')}
+              >
+                <MaterialIcons name="school" size={20} color={colors.secondary} />
+                <Text style={[styles.switchButtonText, { color: colors.secondary }]}>
+                  先輩として登録
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {role !== 'student' && (
+              <TouchableOpacity
+                style={styles.switchButton}
+                onPress={() => handleRoleSwitch('student')}
+              >
+                <MaterialIcons name="person" size={20} color={colors.primary} />
+                <Text style={[styles.switchButtonText, { color: colors.primary }]}>
+                  後輩として利用
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
         {/* 設定メニュー */}
         <View style={styles.section} testID="content-section">
           <Text style={styles.sectionTitle}>設定</Text>
@@ -219,7 +222,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: spacing.xl * 2,
-    paddingHorizontal: spacing.md,
   },
   profileCard: {
     backgroundColor: colors.white,
@@ -296,7 +298,7 @@ const styles = StyleSheet.create({
   },
   section: {
     backgroundColor: colors.white,
-    marginHorizontal: 0,
+    marginHorizontal: spacing.md,
     marginTop: spacing.lg,
     padding: spacing.lg,
     borderRadius: borderRadius.lg,
