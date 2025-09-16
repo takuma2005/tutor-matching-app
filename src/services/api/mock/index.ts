@@ -26,6 +26,7 @@ export { mockTutorService } from './tutorService';
 export { mockCoinService } from './coinService';
 export { mockNotificationService } from './notificationService';
 export { mockRealtimeService } from './realtimeService';
+export { mockChatService } from './chatService';
 
 // テストデータもエクスポート
 export * from './data';
@@ -73,14 +74,26 @@ const prodApiClient = {
       pagination: { page: 1, limit: 0, total: 0, has_more: false },
     }),
     // マッチング関連（本番スタブ）
-    sendMatchRequest: async (_tutorId: string, _message: string, _scheduleNote?: string) =>
-      notImplemented('student.sendMatchRequest'),
-    getMatchRequests: async (_status?: unknown) => ({ success: true, data: [] }),
+    sendMatchRequest: async (
+      _studentId: string,
+      _tutorId: string,
+      _message: string,
+      _scheduleNote?: string,
+    ) => notImplemented('student.sendMatchRequest'),
+    getMatchRequests: async (_studentId: string, _status?: unknown) => ({
+      success: true,
+      data: [],
+    }),
     cancelMatchRequest: async (_matchId: string) => notImplemented('student.cancelMatchRequest'),
     // レッスン関連
     bookLesson: async (_tutorId: string, _lessonData: unknown) =>
       notImplemented('student.bookLesson'),
-    getLessons: async (_filters?: unknown, _page?: number, _limit?: number) => ({
+    getLessons: async (
+      _studentId: string,
+      _filters?: unknown,
+      _page?: number,
+      _limit?: number,
+    ) => ({
       success: true,
       data: [],
       pagination: { page: 1, limit: 0, total: 0, has_more: false },
@@ -106,7 +119,7 @@ const prodApiClient = {
     }),
     sendMessage: async (_chatRoomId: string, _senderId: string, _text: string) =>
       notImplemented('chat.sendMessage'),
-    updateMessageStatus: async (_messageId: string, _status: string) =>
+    updateMessageStatus: async (_messageId: string, _status: string, _userId?: string) =>
       notImplemented('chat.updateMessageStatus'),
     createChatRoom: async (_tutorId: string, _studentId: string) =>
       notImplemented('chat.createChatRoom'),

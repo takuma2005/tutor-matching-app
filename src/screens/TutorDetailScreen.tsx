@@ -31,6 +31,7 @@ import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 import ScreenContainer from '@/components/common/ScreenContainer';
 import Section from '@/components/common/Section';
+import { useAuth } from '@/contexts/AuthContext';
 import { getApiClient } from '@/services/api/mock';
 import type { Tutor, Student } from '@/services/api/types';
 
@@ -47,6 +48,7 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { student: authStudent, user: authUser } = useAuth();
 
   // マッチング申請モーダルの状態
   const [showMatchModal, setShowMatchModal] = useState(false);
@@ -84,12 +86,19 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
   React.useEffect(() => {
     const api = getApiClient();
     let mounted = true;
-    Promise.all([api.student.searchTutors(undefined, 1, 200), api.student.getProfile('student-1')])
+    const studentId = authStudent?.id ?? authUser?.id;
+    Promise.all([
+      api.student.searchTutors(undefined, 1, 200),
+      studentId
+        ? api.student.getProfile(studentId)
+        : Promise.resolve({ success: false as const, data: undefined as unknown as Student }),
+    ])
       .then(([tutorsResp, studentResp]) => {
         if (!mounted) return;
         const tutors = tutorsResp?.success ? tutorsResp.data : [];
         setTutor(tutors.find((t) => t.id === tutorId));
         if (studentResp?.success) setCurrentStudent(studentResp.data);
+        else if (authStudent) setCurrentStudent(authStudent);
       })
       .catch(() => {})
       .finally(() => {
@@ -100,7 +109,7 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
     return () => {
       mounted = false;
     };
-  }, [tutorId]);
+  }, [authStudent, authUser?.id, tutorId]);
 
   // Bottom sheet state
   const [isSheetOpen, setSheetOpen] = useState(false);
@@ -162,6 +171,11 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
     setShowMatchModal(false);
 
     // 確認ダイアログ
+    if (!currentStudent) {
+      Alert.alert('エラー', 'ログイン済みの生徒情報が取得できませんでした。');
+      return;
+    }
+
     Alert.alert(
       'マッチング申請',
       `${tutor.name}さんにマッチング申請を送信しますか？\n\n必要コイン：${MATCHING_COST}コイン\n残高：${currentStudent?.coins ?? 0}コイン → ${(currentStudent?.coins ?? 0) - MATCHING_COST}コイン`,
@@ -174,6 +188,7 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
             try {
               const api = getApiClient();
               const response = await api.student.sendMatchRequest(
+                currentStudent.id,
                 tutorId,
                 matchMessage.trim(),
                 scheduleNote.trim() || undefined,
@@ -181,9 +196,7 @@ export default function TutorDetailScreen({ route, navigation }: Props) {
 
               if (response.success) {
                 // 残高を更新（モックデータから取得）
-                const updatedStudent = await api.student.getProfile(
-                  currentStudent?.id ?? 'student-1',
-                );
+                const updatedStudent = await api.student.getProfile(currentStudent.id);
                 if (updatedStudent.success) {
                   setCurrentStudent(updatedStudent.data);
                 }

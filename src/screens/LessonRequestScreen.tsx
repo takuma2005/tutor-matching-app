@@ -22,6 +22,7 @@ import { z } from 'zod';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 import ScreenContainer from '@/components/common/ScreenContainer';
+import { useAuth } from '@/contexts/AuthContext';
 import { CoinManager } from '@/domain/coin/coinManager';
 import { getApiClient } from '@/services/api/mock';
 import type { Tutor, Student, Lesson } from '@/services/api/types';
@@ -101,22 +102,27 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
   const { tutorId } = route.params;
   const [tutor, setTutor] = useState<Tutor | undefined>(undefined);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
+  const { student: authStudent, user: authUser } = useAuth();
 
   React.useEffect(() => {
     const api = getApiClient();
     let mounted = true;
+    const studentId = authStudent?.id ?? authUser?.id;
     Promise.all([
-      api.student.getProfile('student-1'),
+      studentId
+        ? api.student.getProfile(studentId)
+        : Promise.resolve({ success: false as const, data: undefined as unknown as Student }),
       api.student.searchTutors(undefined, 1, 200),
     ]).then(([profileResp, tutorsResp]) => {
       if (!mounted) return;
       if (profileResp?.success) setCurrentStudent(profileResp.data);
+      else if (authStudent) setCurrentStudent(authStudent);
       if (tutorsResp?.success) setTutor(tutorsResp.data.find((t) => t.id === tutorId));
     });
     return () => {
       mounted = false;
     };
-  }, [tutorId]);
+  }, [authStudent, authUser?.id, tutorId]);
 
   const [request, setRequest] = useState<LessonRequest>({
     subject: tutor?.subjects_taught[0] || '数学',
@@ -275,6 +281,11 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
     }
 
     // 確認ダイアログ
+    if (!currentStudent) {
+      Alert.alert('エラー', 'ログイン済みの生徒情報が必要です。');
+      return;
+    }
+
     Alert.alert(
       '授業を申請しますか？',
       `先輩：${tutor.name}\n科目：${request.subject}\n日時：${formatDate(request.date)} ${formatTime(request.date)}\n時間：${request.duration}分\n料金：${request.totalCost}コイン\n\n申請後、コインが仮押さえされます。`,
@@ -288,7 +299,7 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
               const api = getApiClient();
               const payload: Omit<Lesson, 'id' | 'status' | 'created_at' | 'updated_at'> = {
                 tutor_id: tutor.id,
-                student_id: currentStudent?.id ?? 'student-1',
+                student_id: currentStudent.id,
                 subject: request.subject,
                 scheduled_at: request.date.toISOString(),
                 duration_minutes: request.duration,
@@ -299,7 +310,7 @@ export default function LessonRequestScreen({ route, navigation }: Props) {
               const res = await api.student.bookLesson(tutor.id, payload);
               if (res.success) {
                 // Sync balance from backend to avoid drift
-                await CoinManager.syncBalance(currentStudent?.id ?? 'student-1');
+                await CoinManager.syncBalance(currentStudent.id);
 
                 Alert.alert(
                   '申請完了',

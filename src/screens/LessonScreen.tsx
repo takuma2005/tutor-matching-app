@@ -63,9 +63,15 @@ export default function LessonScreen() {
 
   React.useEffect(() => {
     const api = getApiClient();
+    const studentId = user?.id;
+    if (!studentId) {
+      setLessons([]);
+      return;
+    }
+
     let mounted = true;
     Promise.all([
-      api.student.getLessons(undefined, 1, 100),
+      api.student.getLessons(studentId, undefined, 1, 100),
       api.student.searchTutors(undefined, 1, 200),
     ]).then(([lessonsResp, tutorsResp]) => {
       if (!mounted) return;
@@ -77,7 +83,7 @@ export default function LessonScreen() {
     return () => {
       mounted = false;
     };
-  }, [mapApiLessonToLocal]);
+  }, [mapApiLessonToLocal, user?.id]);
 
   const now = Date.now();
 

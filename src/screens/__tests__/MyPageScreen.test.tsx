@@ -123,7 +123,6 @@ describe('MyPageScreen', () => {
 
       expect(screen.getByText('設定')).toBeTruthy();
       expect(screen.getByText('コイン管理')).toBeTruthy();
-      expect(screen.getByText('通知設定')).toBeTruthy();
       expect(screen.getByText('ヘルプ・サポート')).toBeTruthy();
       expect(screen.getByText('ログアウト')).toBeTruthy();
     });

@@ -5,11 +5,12 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 
 import { ChatStackParamList } from '../navigation/ChatStackNavigator';
-import { mockApiClient } from '../services/api/mock';
-import { Lesson, Tutor } from '../services/api/types';
-import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 import StandardScreen from '@/components/templates/StandardScreen';
+import { useAuth } from '@/contexts/AuthContext';
+import { getApiClient } from '@/services/api/mock';
+import type { Lesson, Tutor } from '@/services/api/types';
+import { colors, spacing, typography, borderRadius } from '@/styles/theme';
 
 type LessonHistoryScreenNavigationProp = StackNavigationProp<ChatStackParamList, 'LessonHistory'>;
 type LessonHistoryScreenRouteProp = RouteProp<ChatStackParamList, 'LessonHistory'>;
@@ -24,13 +25,21 @@ const LessonHistoryScreen: React.FC<Props> = ({ route }) => {
   const [lessons, setLessons] = React.useState<Lesson[]>([]);
   const [tutor, setTutor] = React.useState<Tutor | null>(null);
   const [selectedTab, setSelectedTab] = React.useState<'upcoming' | 'completed'>('upcoming');
+  const { student, user } = useAuth();
+  const api = React.useMemo(() => getApiClient(), []);
 
   React.useEffect(() => {
+    const studentId = student?.id ?? user?.id;
+    if (!studentId) {
+      setLessons([]);
+      return;
+    }
+
     const fetchData = async () => {
       try {
         const [lessonsResp, tutorsResp] = await Promise.all([
-          mockApiClient.student.getLessons(),
-          mockApiClient.student.searchTutors(),
+          api.student.getLessons(studentId),
+          api.student.searchTutors(undefined, 1, 200),
         ]);
 
         if (tutorsResp.success) {
@@ -62,7 +71,7 @@ const LessonHistoryScreen: React.FC<Props> = ({ route }) => {
     };
 
     fetchData();
-  }, [tutorId]);
+  }, [api, student?.id, tutorId, user?.id]);
 
   const now = Date.now();
 

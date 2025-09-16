@@ -9,6 +9,7 @@ import type {
   TypingInfo,
   ChatError as _ChatError,
 } from '@/interfaces/ChatRepository';
+import { mockStudents } from '@/services/api/mock/data';
 import type { Message, ChatRoom } from '@/services/api/types';
 
 // モック用のデータストレージ
@@ -18,19 +19,21 @@ interface MockChatData {
   typingStates: { [roomId: string]: { [userId: string]: TypingInfo } };
 }
 
+const defaultStudentId = mockStudents[0]?.id ?? 'student-1';
+
 const mockData: MockChatData = {
   rooms: [
     {
       id: 'room-1',
       tutorId: '1',
-      studentId: 'student-1',
+      studentId: defaultStudentId,
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date(),
     },
     {
       id: 'room-2',
       tutorId: '2',
-      studentId: 'student-1',
+      studentId: defaultStudentId,
       createdAt: new Date('2024-01-02'),
       updatedAt: new Date(),
     },
@@ -48,7 +51,7 @@ const mockData: MockChatData = {
       {
         id: 'msg-2',
         chatRoomId: 'room-1',
-        senderId: 'student-1',
+        senderId: defaultStudentId,
         text: 'よろしくお願いします！二次関数の問題で困っています。',
         timestamp: new Date('2024-01-01T10:05:00'),
         status: 'read',
